@@ -1,0 +1,4 @@
+{
+    "nixEnvSelector.nixFile": "${workspaceRoot}/default.nix",
+    "FSharp.suggestGitignore": false
+}
