@@ -9,7 +9,8 @@ CREATE TABLE definitions (
     amount_type AmountType NOT NULL,
     start_date DATE NOT NULL,
     end_date DATE DEFAULT NULL,
-    frequency Frequency NOT NULL
+    frequency Frequency NOT NULL,
+    is_deleted BOOLEAN DEFAULT false NOT NULL
 );
 CREATE TABLE archive (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,

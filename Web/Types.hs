@@ -17,17 +17,15 @@ data DefinitionsController
   | NewDefinitionAction
   | ShowDefinitionAction {definitionId :: !(Id Definition)}
   | CreateDefinitionAction
-  | EditDefinitionAction {definitionId :: !(Id Definition)}
-  | UpdateDefinitionAction {definitionId :: !(Id Definition)}
   | DeleteDefinitionAction {definitionId :: !(Id Definition)}
   deriving (Eq, Show, Data)
 
 data ArchiveController
-    = ArchivesAction
-    | NewArchiveAction
-    | ShowArchiveAction { archiveId :: !(Id Archive) }
-    | CreateArchiveAction
-    | EditArchiveAction { archiveId :: !(Id Archive) }
-    | UpdateArchiveAction { archiveId :: !(Id Archive) }
-    | DeleteArchiveAction { archiveId :: !(Id Archive) }
-    deriving (Eq, Show, Data)
+  = ArchivesAction
+  | NewArchiveAction
+  | ShowArchiveAction {archiveId :: !(Id Archive)}
+  | CreateArchiveAction
+  | EditArchiveAction {archiveId :: !(Id Archive)}
+  | UpdateArchiveAction {archiveId :: !(Id Archive)}
+  | DeleteArchiveAction {archiveId :: !(Id Archive)}
+  deriving (Eq, Show, Data)

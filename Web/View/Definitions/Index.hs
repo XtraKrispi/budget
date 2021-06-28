@@ -1,38 +1,38 @@
 module Web.View.Definitions.Index where
+
 import Web.View.Prelude
 
-data IndexView = IndexView { definitions :: [Definition] }
+newtype IndexView = IndexView {definitions :: [Definition]}
 
 instance View IndexView where
-    html IndexView { .. } = [hsx|
-        <nav>
-            <ol class="breadcrumb">
-                <li class="breadcrumb-item active"><a href={DefinitionsAction}>Definitions</a></li>
-            </ol>
-        </nav>
-        <h1>Index <a href={pathTo NewDefinitionAction} class="btn btn-primary ml-4">+ New</a></h1>
-        <div class="table-responsive">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th>Definition</th>
-                        <th></th>
-                        <th></th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>{forEach definitions renderDefinition}</tbody>
-            </table>
+  html IndexView {..} =
+    [hsx|
+        <h1>Definitions <a href={pathTo NewDefinitionAction} class="btn btn-primary ml-4">+ New</a></h1>
+        <div>
+            {forEach definitions renderDefinition}
         </div>
     |]
 
-
 renderDefinition :: Definition -> Html
-renderDefinition definition = [hsx|
-    <tr>
-        <td>{definition}</td>
-        <td><a href={ShowDefinitionAction (get #id definition)}>Show</a></td>
-        <td><a href={EditDefinitionAction (get #id definition)} class="text-muted">Edit</a></td>
-        <td><a href={DeleteDefinitionAction (get #id definition)} class="js-delete text-muted">Delete</a></td>
-    </tr>
+renderDefinition definition =
+  [hsx|
+  <div class="card mb-2">
+    <div class="card-header d-flex flex-row justify-content-between">
+        <span><strong>{get #description definition}</strong></span>
+        <span class={classes [("text-danger", amountType definition == Debit)
+                            , ("text-success", amountType definition == Credit)]}>
+            <strong>{get #amount definition |> formatCurrency}</strong>
+        </span>
+    </div>
+    <div class="card-body">
+        <div>Frequency: {get #frequency definition |> prettyFreq}</div>
+        <div>Starting: {get #startDate definition |> isoDate}</div>
+    </div>
+     <div class="card-footer">
+        <div class="btn-group">
+            <a class="btn btn-primary" onclick="return confirm('Are you sure you want to delete this item?')" href={DeleteDefinitionAction (get #id definition)}>Delete</a>
+            <a class="btn btn-primary" onclick="return confirm('Are you sure you want to end this item?')" href={DeleteDefinitionAction (get #id definition)}>End</a>
+        </div>
+     </div>
+  </div>
 |]

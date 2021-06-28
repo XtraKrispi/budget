@@ -31,7 +31,7 @@ defaultLayout inner =
                         <a class={classes ["nav-link", ("active", isActivePath ("/" :: Text) )]} aria-current="page" href="/">Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class={classes ["nav-link", ("active", isActivePath DefinitionsAction)]} aria-current="page" href={DefinitionsAction}>Definitions</a>
+                        <a class={classes ["nav-link", ("active", isActivePathOrSub DefinitionsAction)]} aria-current="page" href={DefinitionsAction}>Definitions</a>
                     </li>
                     <li class="nav-item">
                         <a class={classes ["nav-link", ("active", isActivePath ArchivesAction)]}  aria-current="page" href={ArchivesAction}>Archive</a>

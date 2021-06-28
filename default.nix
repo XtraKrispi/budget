@@ -11,6 +11,7 @@ let
             wai
             text
             hlint
+            format-numbers
             p.ihp
         ];
         otherDeps = p: with p; [
