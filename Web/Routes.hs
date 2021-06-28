@@ -11,3 +11,4 @@ instance AutoRoute DefinitionsController
 
 instance AutoRoute ArchiveController
 
+instance AutoRoute SessionsController

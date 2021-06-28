@@ -9,6 +9,7 @@ getDefaultStartDate :: IO Day
 getDefaultStartDate = utctDay <$> getCurrentTime
 
 instance Controller DefinitionsController where
+  beforeAction = ensureIsUser
   action DefinitionsAction = do
     definitions <- query @Definition |> fetch
     render IndexView {..}

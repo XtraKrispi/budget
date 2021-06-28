@@ -20,4 +20,11 @@ CREATE TABLE archive (
     date DATE NOT NULL
 );
 CREATE INDEX archive_definition_id_index ON archive (definition_id);
+CREATE TABLE users (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY NOT NULL,
+    email TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    locked_at TIMESTAMP WITH TIME ZONE,
+    failed_login_attempts INT DEFAULT 0 NOT NULL
+);
 ALTER TABLE archive ADD CONSTRAINT archive_ref_definition_id FOREIGN KEY (definition_id) REFERENCES definitions (id) ON DELETE NO ACTION;

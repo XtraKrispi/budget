@@ -16,8 +16,8 @@ SET SESSION AUTHORIZATION DEFAULT;
 
 ALTER TABLE public.definitions DISABLE TRIGGER ALL;
 
-INSERT INTO public.definitions (id, description, amount, amount_type, start_date, end_date, frequency) VALUES ('33f40247-d8d9-4793-a69d-aab167577076', 'Mortgage', 1481.69000000000005, 'Debit', '2021-06-28', NULL, 'OneTime');
-INSERT INTO public.definitions (id, description, amount, amount_type, start_date, end_date, frequency) VALUES ('0c1c1143-303d-45de-a685-1a2dc9e6212c', 'Payday', 5300, 'Credit', '2021-07-02', NULL, 'BiWeekly');
+INSERT INTO public.definitions (id, description, amount, amount_type, start_date, end_date, frequency, is_deleted) VALUES ('33f40247-d8d9-4793-a69d-aab167577076', 'Mortgage', 1481.69000000000005, 'Debit', '2021-06-28', NULL, 'OneTime', false);
+INSERT INTO public.definitions (id, description, amount, amount_type, start_date, end_date, frequency, is_deleted) VALUES ('0c1c1143-303d-45de-a685-1a2dc9e6212c', 'Payday', 5300, 'Credit', '2021-07-02', NULL, 'BiWeekly', false);
 
 
 ALTER TABLE public.definitions ENABLE TRIGGER ALL;

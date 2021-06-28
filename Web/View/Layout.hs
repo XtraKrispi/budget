@@ -22,6 +22,23 @@ defaultLayout inner =
     <title>App</title>
 </head>
 <body>
+    {navbar}
+    <div class="container mt-4">
+        {renderFlashMessages}
+        {inner}
+    </div>
+</body>
+|]
+
+navbar :: Html
+navbar =
+  case fromFrozenContext @(Maybe User) of
+    Just user -> loggedInNavbar
+    Nothing -> [hsx||]
+
+loggedInNavbar :: Html
+loggedInNavbar =
+  [hsx|
     <nav class="navbar navbar-expand-lg navbar-light bg-light">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">Budget</a>
@@ -37,14 +54,12 @@ defaultLayout inner =
                         <a class={classes ["nav-link", ("active", isActivePath ArchivesAction)]}  aria-current="page" href={ArchivesAction}>Archive</a>
                     </li>
                 </ul>
+                <span class="navbar-text">
+                    <a class="js-delete js-delete-no-confirm" href={DeleteSessionAction}>Logout</a>
+                </span>
             </div>
         </div>
     </nav>
-    <div class="container mt-4">
-        {renderFlashMessages}
-        {inner}
-    </div>
-</body>
 |]
 
 stylesheets :: Html
