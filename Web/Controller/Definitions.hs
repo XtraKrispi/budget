@@ -36,7 +36,7 @@ instance Controller DefinitionsController where
           redirectTo DefinitionsAction
   action DeleteDefinitionAction {definitionId} = do
     definition <- fetch definitionId
-    deleteRecord definition
+    definition { isDeleted = True } |> updateRecord
     setSuccessMessage "Definition deleted"
     redirectTo DefinitionsAction
 

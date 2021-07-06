@@ -41,3 +41,10 @@ data SessionsController
   | CreateSessionAction
   | DeleteSessionAction
   deriving (Eq, Show, Data)
+
+data BudgetItem = BudgetItem 
+  { definitionId :: Id' "definitions"
+  , description :: Text   
+  , amount :: Double
+  , date :: Day 
+  }

@@ -30,7 +30,7 @@ renderDefinition definition =
     </div>
      <div class="card-footer">
         <div class="btn-group">
-            <a class="btn btn-primary" onclick="return confirm('Are you sure you want to delete this item?')" href={DeleteDefinitionAction (get #id definition)}>Delete</a>
+            <a class="btn btn-primary js-delete" href={DeleteDefinitionAction (get #id definition)}>Delete</a>
             <a class="btn btn-primary" onclick="return confirm('Are you sure you want to end this item?')" href={DeleteDefinitionAction (get #id definition)}>End</a>
         </div>
      </div>

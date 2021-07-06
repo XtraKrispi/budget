@@ -43,7 +43,7 @@ loggedInNavbar =
         <div class="container-fluid">
             <a class="navbar-brand" href="/">Budget</a>
             <div class="collapse navbar-collapse" id="navbarSupportedContent">
-                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <ul class="navbar-nav mr-auto">
                     <li class="nav-item">
                         <a class={classes ["nav-link", ("active", isActivePath ("/" :: Text) )]} aria-current="page" href="/">Home</a>
                     </li>
@@ -54,9 +54,11 @@ loggedInNavbar =
                         <a class={classes ["nav-link", ("active", isActivePath ArchivesAction)]}  aria-current="page" href={ArchivesAction}>Archive</a>
                     </li>
                 </ul>
-                <span class="navbar-text">
-                    <a class="js-delete js-delete-no-confirm" href={DeleteSessionAction}>Logout</a>
-                </span>
+            </div>
+            <div class="collapse navbar-collapse">
+            <ul class="navbar-nav ml-auto">
+                <li class="nav-item"><a class="js-delete js-delete-no-confirm nav-link" href={DeleteSessionAction}>Logout</a></li>
+            </ul>
             </div>
         </div>
     </nav>
