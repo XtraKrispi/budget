@@ -10,11 +10,10 @@ import Data.Time (
  )
 import Db qualified
 import Environment (HasAppEnvironment, HasAuthCookieName (authCookieName), HasDbPath)
-import Html.Common (addToast)
+import Handlers.Global (errorToast)
 import Html.Login qualified as Login
-import Lucid (renderText, span_)
+import Lucid (renderText)
 import Model (
-  AlertType (Error),
   SessionId (unSessionId),
   User (passwordHash),
  )
@@ -42,9 +41,7 @@ postLogin = do
   email <- formParam "email"
   password <- formParam "password"
   eUser <- lift $ Db.getUserByEmail email
-  let errorResponse = do
-        setHeader "HX-Reswap" "none"
-        html $ renderText $ addToast Error (span_ "There was a problem logging in, please try again.")
+  let errorResponse = errorToast "There was a problem logging in, please try again."
   case eUser of
     Right (Just user) -> do
       let isValid = Password.validatePassword user.passwordHash password

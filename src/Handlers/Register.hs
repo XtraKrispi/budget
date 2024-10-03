@@ -6,6 +6,7 @@ import Control.Monad.Reader (MonadReader, MonadTrans (lift))
 import Data.Maybe (isJust, isNothing)
 import Db qualified
 import Environment (HasAppEnvironment, HasDbPath)
+import Handlers.Global (errorToast)
 import Html.Common (addToast)
 import Html.Login qualified as Login
 import Htmx.Attributes
@@ -29,9 +30,7 @@ postRegister = do
           hashed <- Password.hashPassword password
           results <- lift $ Db.insertUser (User emailAddress name hashed)
           case results of
-            Left _ -> do
-              setHeader "HX-Reswap" "none"
-              html $ renderText $ addToast Error (span_ "There was an issue signing up, please try again.")
+            Left _ -> errorToast "There was an issue signing up, please try again."
             Right _ -> do
               setHeader "HX-Trigger" "hideRegistrationModal"
               html $ renderText $ addToast Success (span_ "You've been signed up! Please log in below")

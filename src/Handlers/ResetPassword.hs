@@ -24,6 +24,7 @@ import Environment (
     smtpUsername
   ),
  )
+import Handlers.Global (errorToast)
 import Html.Common (addToast)
 import Html.ResetPassword qualified as ResetPassword
 import Lucid (button_, class_, disabled_, id_, renderText, span_, type_)
@@ -120,6 +121,7 @@ postResetPasswordToken = do
   password <- formParam "password"
   passwordConfirmation <- formParam "password-confirmation"
   mUser <- fmap (ResetPassword.getUser token now) <$> lift Db.getUsersForResetPassword
+  let errorResponse = errorToast "Something went wrong, please try again."
   case mUser of
     Right (Just user) ->
       if password == passwordConfirmation
@@ -132,12 +134,6 @@ postResetPasswordToken = do
             Right () -> do
               setHeader "HX-Redirect" "/login"
               html $ renderText $ addToast Success (span_ "You have successfully reset your password, you may now log in.")
-            Left _ -> do
-              setHeader "HX-Reswap" "none"
-              html $ renderText $ addToast Error (span_ "Something went wrong, please try again.")
-        else do
-          setHeader "HX-Reswap" "none"
-          html $ renderText $ addToast Error (span_ "Something went wrong, please try again.")
-    _ -> do
-      setHeader "HX-Reswap" "none"
-      html $ renderText $ addToast Error (span_ "Something went wrong, please try again.")
+            Left _ -> errorResponse
+        else errorResponse
+    _ -> errorResponse

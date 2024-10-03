@@ -7,7 +7,7 @@ import Control.Monad.Reader (MonadReader, MonadTrans (lift))
 import Data.Time (UTCTime (utctDay), getCurrentTime)
 import Db qualified
 import Environment
-import Html.Common (addToast)
+import Handlers.Global (errorToast)
 import Html.Definition (definitions, definitionsModal, definitionsPage)
 import Htmx.Request (isBoosted, isHtmx)
 import Id qualified
@@ -33,7 +33,7 @@ getDefinitionPage = requiresAuth \user -> do
       defs <- lift $ Db.getAllDefinitions user.email
       case defs of
         Right ds -> html $ renderText $ definitions ds
-        Left _ -> setHeader "HX-Reswap" "none" >> html (renderText (addToast Error (span_ "There was an issue fetching definitions, please refresh the page and try again.")))
+        Left _ -> errorToast "There was an issue fetching definitions, please refresh the page and try again."
     else do
       html $ renderText $ definitionsPage user
 
@@ -74,7 +74,7 @@ getDefinitionEdit = requiresAuth \_user -> do
     Right (Just definition) -> do
       setHeader "HX-Trigger-After-Settle" "showDefinitionsModal"
       html $ renderText $ definitionsModal $ Just definition
-    _ -> setHeader "HX-Reswap" "none" >> html (renderText $ addToast Error (span_ "There was an issue fetching the definition.  Please try again."))
+    _ -> errorToast "There was an issue fetching the definition.  Please try again."
 
 postDefinitionEdit ::
   ( HasAuthCookieName env
@@ -96,4 +96,4 @@ postDefinitionEdit = requiresAuth \user -> do
   results <- lift $ Db.upsertDefinition Definition{..} user.email
   case results of
     Right _ -> setHeader "HX-Trigger" "hideDefinitionsModal, reload"
-    Left _ -> setHeader "HX-Reswap" "none" >> html (renderText (addToast Error (span_ "Something went wrong, please try again.")))
+    Left _ -> errorToast "Something went wrong, please try again."

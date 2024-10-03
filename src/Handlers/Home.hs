@@ -8,13 +8,13 @@ import Data.Maybe (fromMaybe)
 import Data.Time (Day, UTCTime (utctDay), addDays, addGregorianMonthsClip, getCurrentTime)
 import Db qualified
 import Environment (HasAppEnvironment, HasAuthCookieName, HasDbPath)
-import Html.Common (addToast)
+import Handlers.Global (errorToast)
 import Html.Home qualified as Home
 import Htmx.Request (isBoosted, isHtmx)
-import Lucid (renderText, span_)
+import Lucid (renderText)
 import Model
 import Web.Scotty.Auth (requiresAuth)
-import Web.Scotty.Trans (ActionT, formParam, html, setHeader)
+import Web.Scotty.Trans (ActionT, formParam, html)
 
 getHome :: (HasAuthCookieName env, HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => ActionT m ()
 getHome = requiresAuth \user -> do
@@ -44,9 +44,7 @@ homeContent user = do
     archive <- ExceptT $ Db.getAllArchive user.email
     pure (fromMaybe defaultScratch scratch, definitions, archive)
   case results of
-    Left _ -> do
-      setHeader "HX-Reswap" "none"
-      html $ renderText $ addToast Error (span_ "There was an issue fetching items, please refresh and try again.")
+    Left _ -> errorToast "There was an issue fetching items, please refresh and try again."
     Right (scratch, defs, archive) -> do
       let items = getItems scratch.endDate defs archive
       html $ renderText $ Home.homeContent items scratch
