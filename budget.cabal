@@ -1,0 +1,88 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.37.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           budget
+version:        0.1.0.0
+category:       Web
+homepage:       https://github.com/githubuser/budget#readme
+author:         Author name here
+maintainer:     example@example.com
+copyright:      2024 Author name here
+license:        BSD-3-Clause
+license-file:   LICENSE
+build-type:     Simple
+extra-source-files:
+    README.md
+    CHANGELOG.md
+
+executable budget
+  main-is: Main.hs
+  other-modules:
+      Db
+      Environment
+      Handlers
+      Handlers.Archive
+      Handlers.Definition
+      Handlers.Global
+      Handlers.Home
+      Handlers.Login
+      Handlers.Register
+      Handlers.ResetPassword
+      Handlers.Session
+      Html.Archive
+      Html.Common
+      Html.Definition
+      Html.Dialog
+      Html.Home
+      Html.Login
+      Html.ResetPassword
+      Htmx.Attributes
+      Htmx.Request
+      Id
+      Model
+      MyUUID
+      Password
+      ResetPassword
+      Svg
+      Web.Scotty.ActionT
+      Web.Scotty.Auth
+      Paths_budget
+  autogen-modules:
+      Paths_budget
+  hs-source-dirs:
+      src
+  default-extensions:
+      OverloadedStrings
+      BlockArguments
+      OverloadedRecordDot
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      MonadRandom
+    , aeson
+    , base >=4.7 && <5
+    , data-default
+    , dotenv
+    , envy
+    , format-numbers
+    , lens
+    , lucid2
+    , mime-mail
+    , monad-logger
+    , mtl
+    , password
+    , raw-strings-qq
+    , scotty
+    , smtp-mail
+    , sqlite-simple
+    , text
+    , time
+    , transformers
+    , unliftio-core
+    , uri-encode
+    , uuid
+    , wai-extra
+    , wai-middleware-static
+  default-language: GHC2021

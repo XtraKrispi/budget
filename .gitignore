@@ -1,0 +1,4 @@
+.env
+.stack-work/
+node_modules/
+*.db
