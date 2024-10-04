@@ -6,6 +6,7 @@ import Html.Common (classList, withPageShell)
 import Html.Dialog qualified as Dialog
 import Htmx.Attributes
 import Lucid
+import Relude
 import Text.RawString.QQ
 
 fullPage :: Html ()

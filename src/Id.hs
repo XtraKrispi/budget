@@ -1,13 +1,12 @@
 module Id where
 
-import Control.Monad.IO.Class (MonadIO)
 import Data.Aeson
-import Data.Text (Text)
 import Data.Text.Lazy qualified as LT
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
 import MyUUID (MyUUID)
 import MyUUID qualified
+import Relude
 import Web.Scotty.Trans (Parsable (..))
 
 newtype Id a = Id {unId :: MyUUID}

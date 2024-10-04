@@ -1,8 +1,8 @@
 module Svg where
 
-import Data.Text (Text)
 import Lucid (Attributes, Term (term))
 import Lucid.Base (makeAttributes)
+import Relude
 
 path_ :: (Term arg result) => arg -> result
 path_ = term "path"

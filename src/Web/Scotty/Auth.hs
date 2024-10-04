@@ -1,16 +1,12 @@
 module Web.Scotty.Auth where
 
-import Control.Monad (when)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader, MonadTrans (..), asks)
-import Data.Text (Text)
-import Data.Text.Lazy (fromStrict)
 import Data.Time (addUTCTime, diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
 import Db qualified
 import Environment (HasAppEnvironment, HasAuthCookieName (authCookieName), HasDbPath)
 import Htmx.Request qualified as Htmx
 import Model (SessionId (..), User)
 import MyUUID qualified
+import Relude
 import Web.Scotty.Cookie (getCookie)
 import Web.Scotty.Trans (ActionT, redirect, setHeader)
 

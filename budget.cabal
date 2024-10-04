@@ -58,6 +58,7 @@ executable budget
       OverloadedStrings
       BlockArguments
       OverloadedRecordDot
+      NoImplicitPrelude
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       MonadRandom
@@ -71,15 +72,13 @@ executable budget
     , lucid2
     , mime-mail
     , monad-logger
-    , mtl
     , password
     , raw-strings-qq
+    , relude
     , scotty
     , smtp-mail
     , sqlite-simple
-    , text
     , time
-    , transformers
     , unliftio-core
     , uri-encode
     , uuid

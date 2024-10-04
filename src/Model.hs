@@ -1,7 +1,7 @@
 module Model where
 
 import Data.Aeson (Encoding, FromJSON, ToJSON (toEncoding), defaultOptions, fieldLabelModifier, genericToEncoding)
-import Data.Text (Text, toLower)
+import Data.Text (toLower)
 import Data.Text.Lazy qualified as LT
 import Data.Time (Day)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
@@ -13,6 +13,7 @@ import Database.SQLite.Simple.ToField (ToField (..))
 import GHC.Generics (Generic)
 import Id
 import MyUUID
+import Relude
 import Text.Read (readMaybe)
 import Web.Scotty (Parsable (..))
 

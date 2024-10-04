@@ -1,10 +1,9 @@
 module Html.Common (withPageShell, withLayout, addToast, classList) where
 
-import Data.Text (Text)
-import Data.Text qualified as T
 import Htmx.Attributes
 import Lucid
 import Model (AlertType (..), User)
+import Relude
 import Svg (d_, fill_, path_, strokeLinecap_, strokeLinejoin_, strokeWidth_, stroke_, viewBox_)
 
 withPageShell :: Html () -> Html ()
@@ -13,8 +12,8 @@ withPageShell content =
     head_ do
       title_ "Budget"
       link_ [rel_ "stylesheet", href_ "/output.css"]
-      script_ [src_ "https://unpkg.com/htmx.org@2.0.2"] ("" :: String)
-      script_ [src_ "https://unpkg.com/hyperscript.org@0.9.12"] ("" :: String)
+      script_ [src_ "https://unpkg.com/htmx.org@2.0.2"] ("" :: Text)
+      script_ [src_ "https://unpkg.com/hyperscript.org@0.9.12"] ("" :: Text)
     body_ [class_ "w-screen"] do
       div_ [class_ "toast toast-top toast-end z-[1000]", id_ "toast-container"] ""
       content
@@ -116,4 +115,4 @@ addToast alertType content = do
 
 classList :: [(Text, Bool)] -> Attributes
 classList cs =
-  class_ $ T.unwords (fst <$> filter snd cs)
+  class_ $ unwords (fst <$> filter snd cs)

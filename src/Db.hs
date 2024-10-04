@@ -3,20 +3,16 @@
 
 module Db where
 
-import Control.Exception (SomeException, catch)
-import Control.Monad.IO.Class (MonadIO, liftIO)
-import Control.Monad.Reader (MonadReader, asks)
-import Data.Foldable (traverse_)
-import Data.Maybe (listToMaybe)
-import Data.Text (Text, pack, toLower)
-import Data.Text.IO qualified as T
+import Control.Exception (catch)
+import Data.Text (pack)
+import Data.Text.IO (hPutStrLn)
 import Data.Time (UTCTime, getCurrentTime)
 import Database.SQLite.Simple (Connection, Only (Only), execute, execute_, query, query_, setTrace, withConnection)
 import Environment (DbPath (fromDbPath), Env (..), HasAppEnvironment (..), HasDbPath (..))
 import Id
 import Model (ArchivedItem (..), Definition (..), Email (..), Hashed, Password (unPassword), Scratch (..), SessionId (..), Token, User (..))
 import MyUUID qualified
-import System.IO (stderr)
+import Relude
 import Text.RawString.QQ (r)
 
 withTraceConnection :: (HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => (Connection -> IO a) -> m a
@@ -27,7 +23,7 @@ withTraceConnection action = do
     case appEnv of
       Dev -> do
         now <- getCurrentTime
-        setTrace conn $ Just $ \t -> T.hPutStrLn stderr $ "SQLITE @ " <> Data.Text.pack (show now) <> ":  " <> t
+        setTrace conn $ Just $ \t -> hPutStrLn stderr $ "SQLITE @ " <> pack (show now) <> ":  " <> t
       Prod -> setTrace conn Nothing
     action conn
 
@@ -54,7 +50,7 @@ getUserByEmail email = do
 
 insertUser :: (HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => User -> m (Either Text ())
 insertUser user =
-  runDb $ \conn -> execute conn "INSERT INTO users(email, name, password_hash) VALUES(?, ?, ?)" (toLower $ unEmail user.email, user.name, unPassword user.passwordHash)
+  runDb $ \conn -> execute conn "INSERT INTO users(email, name, password_hash) VALUES(?, ?, ?)" (user.email, user.name, unPassword user.passwordHash)
 
 createSession :: (HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => Email -> UTCTime -> m (Either Text SessionId)
 createSession email expiry = do

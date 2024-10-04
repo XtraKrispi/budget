@@ -2,8 +2,6 @@
 
 module Handlers.Archive where
 
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (MonadReader, MonadTrans (lift))
 import Data.Time (UTCTime (utctDay), getCurrentTime)
 import Db qualified
 import Environment (HasAppEnvironment, HasAuthCookieName, HasDbPath)
@@ -14,6 +12,7 @@ import Id
 import Lucid
 import Model (ArchiveAction, ArchivedItem (..), MyDay (unMyDay), User (email))
 import MyUUID qualified
+import Relude
 import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Trans (ActionT, formParam, html, setHeader)
 

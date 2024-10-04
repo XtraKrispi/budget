@@ -2,8 +2,6 @@
 
 module Handlers.Definition where
 
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (MonadReader, MonadTrans (lift))
 import Data.Time (UTCTime (utctDay), getCurrentTime)
 import Db qualified
 import Environment
@@ -13,6 +11,7 @@ import Htmx.Request (isBoosted, isHtmx)
 import Id qualified
 import Lucid
 import Model
+import Relude
 import Web.Scotty.ActionT (captureParamMaybe, optionalFormParam, toggleFormParam)
 import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Trans (ActionT, formParam, html, setHeader)

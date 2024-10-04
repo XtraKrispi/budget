@@ -1,9 +1,6 @@
 module Handlers.ResetPassword where
 
-import Control.Monad.Except (ExceptT (..), runExceptT)
-import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Random (MonadRandom)
-import Control.Monad.Reader (MonadReader, MonadTrans (..), asks)
 import Data.Time (
   addUTCTime,
   getCurrentTime,
@@ -33,6 +30,7 @@ import Network.Mail.Mime (htmlPart)
 import Network.Mail.SMTP (Address (..), sendMailWithLoginTLS, simpleMail)
 import Network.URI.Encode (encodeText)
 import Password qualified
+import Relude
 import ResetPassword qualified
 import Web.Scotty.Trans (ActionT, captureParam, formParam, html, setHeader)
 

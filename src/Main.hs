@@ -3,7 +3,6 @@ module Main (main) where
 import Configuration.Dotenv qualified as Dotenv
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Control.Monad.Random (MonadRandom)
-import Control.Monad.Reader (MonadReader, ReaderT (runReaderT))
 import Data.Text.IO qualified as TIO
 import Db qualified
 import Environment (Env (Dev), Environment (envAppEnvironment), HasAppEnvironment, HasAuthCookieName, HasBaseUrl, HasDbPath, HasSmtp)
@@ -11,8 +10,9 @@ import Handlers qualified
 import Model (ArchiveAction (..))
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
+import Relude hiding (get)
 import System.Envy (decodeEnv)
-import System.IO (hPutStrLn, stderr)
+import System.IO (hPutStrLn)
 import Web.Scotty.Trans
 
 main :: IO ()

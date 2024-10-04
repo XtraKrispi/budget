@@ -1,10 +1,9 @@
 module Handlers.Global where
 
-import Control.Monad.IO.Class (MonadIO)
-import Data.Text (Text)
 import Html.Common (addToast)
 import Lucid (ToHtml (..), renderText, span_)
 import Model (AlertType (..))
+import Relude
 import Web.Scotty.Trans (ActionT, html, setHeader)
 
 clearToast :: (MonadIO m) => ActionT m ()

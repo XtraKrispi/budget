@@ -2,10 +2,9 @@ module Htmx.Attributes where
 
 import Data.Aeson (ToJSON (toJSON))
 import Data.Aeson.Text (encodeToLazyText)
-import Data.Text (Text)
-import Data.Text.Lazy (toStrict)
 import Lucid (Attributes)
 import Lucid.Base (makeAttributes)
+import Relude
 
 hxBoost :: Attributes
 hxBoost = makeAttributes "hx-boost" "true"

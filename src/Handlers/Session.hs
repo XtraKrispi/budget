@@ -1,12 +1,10 @@
 module Handlers.Session where
 
-import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.Reader (MonadReader, MonadTrans (lift), asks)
-import Data.Text.Encoding (encodeUtf8)
 import Db qualified
 import Environment (HasAppEnvironment, HasAuthCookieName (authCookieName), HasDbPath)
 import Model (SessionId (..))
 import MyUUID qualified
+import Relude
 import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Cookie (SetCookie (..), defaultSetCookie, getCookie, setCookie)
 import Web.Scotty.Trans (ActionT, setHeader)

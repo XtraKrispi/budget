@@ -1,8 +1,5 @@
 module Handlers.Login where
 
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (MonadReader, MonadTrans (lift), asks)
-import Data.Text.Encoding (encodeUtf8)
 import Data.Time (
   addUTCTime,
   getCurrentTime,
@@ -19,6 +16,7 @@ import Model (
  )
 import MyUUID qualified
 import Password qualified
+import Relude
 import Web.Scotty.Cookie (
   SetCookie (
     setCookieHttpOnly,

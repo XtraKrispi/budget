@@ -1,9 +1,5 @@
 module Handlers.Register where
 
-import Control.Monad (when)
-import Control.Monad.IO.Class (MonadIO)
-import Control.Monad.Reader (MonadReader, MonadTrans (lift))
-import Data.Maybe (isJust, isNothing)
 import Db qualified
 import Environment (HasAppEnvironment, HasDbPath)
 import Handlers.Global (errorToast)
@@ -13,6 +9,7 @@ import Htmx.Attributes
 import Lucid
 import Model
 import Password qualified
+import Relude
 import Web.Scotty.Trans
 
 postRegister :: (HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => ActionT m ()

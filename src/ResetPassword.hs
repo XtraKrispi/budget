@@ -1,12 +1,11 @@
 module ResetPassword where
 
-import Control.Monad.IO.Class (MonadIO)
 import Control.Monad.Random (MonadRandom (getRandomRs))
-import Data.Foldable (find)
 import Data.Password.Argon2 qualified as Argon2
 import Data.Text (pack)
 import Data.Time (UTCTime)
 import Model (Hashed, PlainText, Token (..), User)
+import Relude
 
 generateToken :: (MonadIO m, MonadRandom m) => m (Token PlainText, Token Hashed)
 generateToken = do

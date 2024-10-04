@@ -1,11 +1,11 @@
 module Html.ResetPassword where
 
-import Data.Text (Text)
 import Html.Common (classList, withPageShell)
 import Htmx.Attributes (hxPost, hxSwap, hxSwapOob, hxTarget, hxTrigger, hxValidate)
 import Lucid
 import Model
 import Network.URI.Encode (encodeText)
+import Relude
 
 landingPage :: Html ()
 landingPage = withPageShell do

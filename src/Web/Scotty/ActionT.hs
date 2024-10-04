@@ -1,6 +1,7 @@
 module Web.Scotty.ActionT where
 
-import Data.Foldable (find)
+import Relude
+
 import Data.Text.Lazy qualified as LT
 import Web.Scotty.Internal.Types (ActionT)
 import Web.Scotty.Trans (Parsable (parseParam), captureParams, formParams)

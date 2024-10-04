@@ -1,10 +1,5 @@
 module Handlers.Home (getHome, postHome) where
 
-import Control.Monad.Except (ExceptT (ExceptT), runExceptT)
-import Control.Monad.IO.Class (MonadIO (liftIO))
-import Control.Monad.Reader (MonadReader, MonadTrans (lift))
-import Data.List (sortOn)
-import Data.Maybe (fromMaybe)
 import Data.Time (Day, UTCTime (utctDay), addDays, addGregorianMonthsClip, getCurrentTime)
 import Db qualified
 import Environment (HasAppEnvironment, HasAuthCookieName, HasDbPath)
@@ -13,6 +8,7 @@ import Html.Home qualified as Home
 import Htmx.Request (isBoosted, isHtmx)
 import Lucid (renderText)
 import Model
+import Relude
 import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Trans (ActionT, formParam, html)
 
