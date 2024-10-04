@@ -10,11 +10,9 @@ import Database.SQLite.Simple.FromField (FieldParser, FromField (..), ResultErro
 import Database.SQLite.Simple.FromRow (FromRow (..))
 import Database.SQLite.Simple.Ok (Ok (..))
 import Database.SQLite.Simple.ToField (ToField (..))
-import GHC.Generics (Generic)
 import Id
 import MyUUID
 import Relude
-import Text.Read (readMaybe)
 import Web.Scotty (Parsable (..))
 
 data PlainText
@@ -25,7 +23,7 @@ newtype Password a = Password {unPassword :: Text}
 
 instance ToField (Password Hashed) where
   toField :: Password Hashed -> SQLData
-  toField (Password pass) = SQLText pass
+  toField = SQLText . unPassword
 
 instance FromField (Password Hashed) where
   fromField :: FieldParser (Password Hashed)
