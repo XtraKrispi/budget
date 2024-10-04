@@ -66,6 +66,7 @@ executable budget
     , base >=4.7 && <5
     , data-default
     , dotenv
+    , effectful
     , envy
     , format-numbers
     , lens

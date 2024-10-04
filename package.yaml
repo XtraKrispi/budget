@@ -22,28 +22,29 @@ default-extensions:
 
 dependencies:
   - base >= 4.7 && < 5
-  - sqlite-simple
-  - lucid2
-  - scotty
-  - password
-  - time
-  - dotenv
   - aeson
-  - smtp-mail
-  - wai-middleware-static
-  - raw-strings-qq
-  - envy
-  - lens
-  - wai-extra
-  - monad-logger
-  - uuid
-  - MonadRandom
-  - unliftio-core
-  - mime-mail
-  - uri-encode
-  - format-numbers
   - data-default
+  - dotenv
+  - effectful
+  - envy
+  - format-numbers
+  - lens
+  - lucid2
+  - mime-mail
+  - monad-logger
+  - MonadRandom
+  - password
+  - raw-strings-qq
   - relude
+  - scotty
+  - smtp-mail
+  - sqlite-simple
+  - time
+  - unliftio-core
+  - uri-encode
+  - uuid
+  - wai-extra
+  - wai-middleware-static
 
 ghc-options:
   - -Wall
