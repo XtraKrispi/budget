@@ -9,12 +9,12 @@ defaultEnvOptions :: Option
 defaultEnvOptions = Option{dropPrefixCount = 0, customPrefix = "BUDGET"}
 
 data Smtp = Smtp
-  { smtpRelay :: String
-  , smtpHostname :: String
-  , smtpFromName :: Text
-  , smtpFromEmail :: Text
-  , smtpUsername :: String
-  , smtpPassword :: String
+  { smtpRelay :: !String
+  , smtpHostname :: !String
+  , smtpFromName :: !Text
+  , smtpFromEmail :: !Text
+  , smtpUsername :: !String
+  , smtpPassword :: !String
   }
   deriving (Generic, Show)
 
@@ -59,11 +59,11 @@ instance DefConfig Env where
   defConfig = Dev
 
 data Environment = Environment
-  { envDbPath :: DbPath
-  , envAuthCookieName :: Text
-  , envSmtp :: Smtp
-  , envBaseUrl :: BaseUrl
-  , envAppEnvironment :: Env
+  { envDbPath :: !DbPath
+  , envAuthCookieName :: !Text
+  , envSmtp :: !Smtp
+  , envBaseUrl :: !BaseUrl
+  , envAppEnvironment :: !Env
   }
   deriving (Generic, Show)
 

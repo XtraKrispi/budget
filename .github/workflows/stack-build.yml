@@ -10,5 +10,4 @@ jobs:
         with:
           enable-stack: true
           stack-version: "latest"
-      - run: stack install --local-bin-path /home/runner/work/budget/budget/exe
-      - run: ls /home/runner/work/budget/budget/exe
+      - run: stack build
