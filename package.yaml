@@ -23,8 +23,6 @@ default-extensions:
 dependencies:
   - name: base
     version: ">= 4.7 && < 5"
-    mixin:
-      - hiding (Prelude)
   - aeson
   - data-default
   - dotenv

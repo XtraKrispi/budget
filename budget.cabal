@@ -105,6 +105,4 @@ executable budget
     , wai
     , wai-extra
     , wai-middleware-static
-  mixins:
-      base hiding (Prelude)
   default-language: GHC2021
