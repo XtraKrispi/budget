@@ -1,6 +1,6 @@
 module App where
 
-import AppError (AppError)
+import AppError (AppError (NotFoundError))
 import Control.Exception (throwIO, try)
 import Control.Monad.Error.Class
 import Control.Monad.IO.Unlift
@@ -55,10 +55,7 @@ instance MonadSession App where
 
   getSessionUser :: SessionId -> App (Maybe (User, ExpirationTime))
   getSessionUser sessionId = do
-    results <- tryError $ SessionDb.getUserForSession sessionId
-    case results of
-      Right r -> pure $ Just $ second ExpirationTime r
-      Left _err -> pure Nothing
+    fmap (second ExpirationTime) <$> SessionDb.getUserForSession sessionId
   logout :: SessionId -> App ()
   logout = SessionDb.deleteSession
 
@@ -80,7 +77,11 @@ instance MonadArchive App where
 
 instance MonadResetPassword App where
   generateToken = ResetPassword.generateToken
-  insertToken email (ExpirationTime ex) token = UserDb.insertResetToken email token ex
+  insertToken email (ExpirationTime ex) token = do
+    results <- UserDb.insertResetToken email token ex
+    case results of
+      Nothing -> throwError NotFoundError
+      _ -> pure ()
   getUsers = fmap (fmap (\(user, ex, token) -> (user, ExpirationTime ex, token))) UserDb.getUsersForResetPassword
   removeUserTokens = UserDb.removeAllUserTokens
 

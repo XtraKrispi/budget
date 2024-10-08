@@ -2,8 +2,6 @@
 
 module Db.Session where
 
-import AppError (AppError (SessionError))
-import Control.Monad.Error.Class (MonadError (throwError))
 import Data.Time (UTCTime)
 import Database.SQLite.Simple (Only (..), execute, query)
 import Db
@@ -26,7 +24,7 @@ createSession email expiry = do
       (sessionId, expiry, email)
   pure sessionId
 
-getUserForSession :: (WithDb env m) => SessionId -> m (User, UTCTime)
+getUserForSession :: (WithDb env m) => SessionId -> m (Maybe (User, UTCTime))
 getUserForSession sessionId = do
   results <- runDb \conn -> do
     query
@@ -42,8 +40,8 @@ getUserForSession sessionId = do
       (Only sessionId)
 
   case results of
-    [(email, name, passwordHash, expirationTime)] -> pure (User email name passwordHash, expirationTime)
-    _ -> throwError $ SessionError $ "Too many results getting user for session: " <> MyUUID.toText (unSessionId sessionId)
+    [(email, name, passwordHash, expirationTime)] -> pure $ Just (User email name passwordHash, expirationTime)
+    _ -> pure Nothing
 
 updateSession :: (WithDb env m) => SessionId -> UTCTime -> m ()
 updateSession sessionId expiration =

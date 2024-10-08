@@ -1,6 +1,5 @@
 module AppError where
 
-import Control.Monad.Error.Class (MonadError)
 import Relude
 
 data AppError
@@ -11,5 +10,3 @@ data AppError
   deriving (Show)
 
 instance Exception AppError
-
-type WithError m = MonadError AppError m

@@ -2,8 +2,6 @@
 
 module Db.User where
 
-import AppError (AppError (NotFoundError))
-import Control.Monad.Error.Class (MonadError (throwError))
 import Data.Time (UTCTime)
 import Database.SQLite.Simple (Only (..), execute, query, query_)
 import Db
@@ -20,7 +18,7 @@ insertUser :: (WithDb env m) => User -> m ()
 insertUser user =
   runDb $ \conn -> execute conn "INSERT INTO users(email, name, password_hash) VALUES(?, ?, ?)" (user.email, user.name, unPassword user.passwordHash)
 
-insertResetToken :: (WithDb env m) => Email -> Token Hashed -> UTCTime -> m ()
+insertResetToken :: (WithDb env m) => Email -> Token Hashed -> UTCTime -> m (Maybe ())
 insertResetToken email token expiry = do
   results :: [Only Text] <- runDb \conn ->
     query
@@ -33,8 +31,8 @@ insertResetToken email token expiry = do
       RETURNING user_id;|]
       (token, expiry, email)
   case results of
-    [] -> throwError NotFoundError
-    _ -> pure ()
+    [] -> pure Nothing
+    _ -> pure $ Just ()
 
 getUsersForResetPassword :: (WithDb env m) => m [(User, UTCTime, Token Hashed)]
 getUsersForResetPassword = do
