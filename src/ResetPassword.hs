@@ -4,7 +4,7 @@ import Control.Monad.Random (MonadRandom (getRandomRs))
 import Data.Password.Argon2 qualified as Argon2
 import Data.Text (pack)
 import Data.Time (UTCTime)
-import Model (Hashed, PlainText, Token (..), User)
+import Model (ExpirationTime (..), Hashed, PlainText, Token (..), User)
 import Relude
 
 generateToken :: (MonadIO m, MonadRandom m) => m (Token PlainText, Token Hashed)
@@ -21,9 +21,9 @@ validateToken (Token hashed) (Token plainText) =
           (Argon2.PasswordHash hashed)
    in results == Argon2.PasswordCheckSuccess
 
-getUser :: Token PlainText -> UTCTime -> [(User, UTCTime, Token Hashed)] -> Maybe User
+getUser :: Token PlainText -> UTCTime -> [(User, ExpirationTime, Token Hashed)] -> Maybe User
 getUser token currentTime users =
   (\(u, _, _) -> u)
     <$> find
-      (\(_u, expiry, hashed) -> validateToken hashed token && currentTime <= expiry)
+      (\(_u, ExpirationTime expiry, hashed) -> validateToken hashed token && currentTime <= expiry)
       users

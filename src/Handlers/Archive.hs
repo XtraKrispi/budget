@@ -2,64 +2,53 @@
 
 module Handlers.Archive where
 
-import Data.Time (UTCTime (utctDay), getCurrentTime)
-import Db qualified
-import Environment (HasAppEnvironment, HasAuthCookieName, HasDbPath)
-import Handlers.Global (errorToast)
+import Effects.Archive
+import Effects.MyUUID (MonadMyUUID (generate))
+import Effects.Time (MonadTime (..))
 import Html.Archive qualified as Archive
 import Htmx.Request (isBoosted, isHtmx)
 import Id
 import Lucid
 import Model (ArchiveAction, ArchivedItem (..), MyDay (unMyDay), User (email))
-import MyUUID qualified
 import Relude
-import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Trans (ActionT, formParam, html, setHeader)
 
 getArchive ::
-  ( HasAuthCookieName env
-  , HasAppEnvironment env
-  , HasDbPath env
+  ( MonadArchive m
   , MonadIO m
-  , MonadReader env m
   ) =>
+  User ->
   ActionT m ()
-getArchive = requiresAuth \user -> do
+getArchive user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if htmx && not boosted
     then do
-      archiveItems <- lift $ Db.getAllArchive user.email
-      case archiveItems of
-        Right items -> html $ renderText $ Archive.items items
-        Left _ -> errorToast "There was a problem retrieving archive items. Please refresh and try again."
-      pure ()
+      items <- Effects.Archive.getAll user.email
+      html $ renderText $ Archive.items items
     else do
       html $ renderText $ Archive.archivePage user
 
 postArchiveAction ::
-  ( HasAuthCookieName env
-  , HasAppEnvironment env
-  , HasDbPath env
-  , MonadIO m
-  , MonadReader env m
+  ( MonadIO m
+  , MonadMyUUID m
+  , MonadTime m
+  , MonadArchive m
   ) =>
   ArchiveAction ->
+  User ->
   ActionT m ()
-postArchiveAction archivedItemAction = requiresAuth \user -> do
+postArchiveAction archivedItemAction user = do
   archivedItemAmount <- formParam "itemAmount"
   archivedItemDate <- unMyDay <$> formParam "itemDate"
   archivedItemItemDefinitionId <- formParam "itemDefinitionId"
   archivedItemDescription <- formParam "itemDescription"
 
-  archivedItemId <- liftIO $ Id <$> MyUUID.nextRandom
-  archivedItemActionDate <- liftIO $ utctDay <$> getCurrentTime
+  archivedItemId <- Id <$> generate
+  archivedItemActionDate <- today
 
   let item = ArchivedItem{..}
 
-  results <- lift $ Db.insertArchive user.email item
+  insertArchive user.email item
 
-  either
-    (const $ errorToast "Could not move to the archive, please try again.")
-    (const $ setHeader "HX-Trigger" "reload")
-    results
+  setHeader "HX-Trigger" "reload"

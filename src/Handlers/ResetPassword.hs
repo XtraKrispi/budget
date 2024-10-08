@@ -1,17 +1,17 @@
 module Handlers.ResetPassword where
 
-import Control.Monad.Random (MonadRandom)
 import Data.Time (
   addUTCTime,
   getCurrentTime,
   secondsToNominalDiffTime,
  )
-import Db qualified
+import Effects.ResetPassword
+import Effects.Time (MonadTime)
+import Effects.Time qualified
+import Effects.User
 import Environment (
   BaseUrl (BaseUrl),
-  HasAppEnvironment,
   HasBaseUrl (..),
-  HasDbPath,
   HasSmtp (..),
   Smtp (
     smtpFromEmail,
@@ -25,7 +25,7 @@ import Handlers.Global (errorToast)
 import Html.Common (addToast)
 import Html.ResetPassword qualified as ResetPassword
 import Lucid (button_, class_, disabled_, id_, renderText, span_, type_)
-import Model (AlertType (..), Email (unEmail), Password, PlainText, Token (Token), User (..))
+import Model (AlertType (..), Email (unEmail), ExpirationTime (..), Password, PlainText, Token (Token), User (..))
 import Network.Mail.Mime (htmlPart)
 import Network.Mail.SMTP (Address (..), sendMailWithLoginTLS, simpleMail)
 import Network.URI.Encode (encodeText)
@@ -38,23 +38,22 @@ getResetPassword :: (MonadIO m) => ActionT m ()
 getResetPassword = html $ renderText ResetPassword.landingPage
 
 postResetPassword ::
-  ( HasDbPath env
-  , HasAppEnvironment env
-  , HasSmtp env
+  ( HasSmtp env
   , HasBaseUrl env
   , MonadIO m
   , MonadReader env m
-  , MonadRandom m
+  , MonadResetPassword m
+  , MonadTime m
   ) =>
   ActionT m ()
 postResetPassword = do
   smtpConfig <- lift $ asks smtp
   email <- formParam "email"
-  (Token clearTextToken, hashedToken) <- lift ResetPassword.generateToken
+  (Token clearTextToken, hashedToken) <- Effects.ResetPassword.generateToken
   BaseUrl base <- lift $ asks baseUrl
   let url = base <> "/reset-password/" <> encodeText clearTextToken
-  expiry <- addUTCTime (secondsToNominalDiffTime (10 * 60)) <$> liftIO getCurrentTime
-  _ <- lift $ Db.insertResetToken email hashedToken expiry
+  expiry <- ExpirationTime . addUTCTime (secondsToNominalDiffTime (10 * 60)) <$> Effects.Time.now
+  Effects.ResetPassword.insertToken email expiry hashedToken
   let mail =
         simpleMail
           ( Address
@@ -70,13 +69,19 @@ postResetPassword = do
   setHeader "HX-Reswap" "none"
   html $ renderText $ addToast Success (span_ "If you have an account with Budget, please check your email for a password reset link.")
 
-getResetPasswordToken :: (HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => ActionT m ()
+getResetPasswordToken ::
+  ( MonadUser m
+  , MonadIO m
+  , MonadTime m
+  , MonadResetPassword m
+  ) =>
+  ActionT m ()
 getResetPasswordToken = do
   token :: Token PlainText <- captureParam "token"
-  now <- liftIO getCurrentTime
-  mUser <- fmap (ResetPassword.getUser token now) <$> lift Db.getUsersForResetPassword
+  now <- Effects.Time.now
+  mUser <- ResetPassword.getUser token now <$> Effects.ResetPassword.getUsers
   case mUser of
-    Right (Just _user) ->
+    Just _user ->
       html $ renderText $ ResetPassword.tokenPage token
     _ -> html $ renderText ResetPassword.errorPage
 
@@ -107,10 +112,9 @@ postResetPasswordValidate = do
             "Reset Password"
 
 postResetPasswordToken ::
-  ( HasDbPath env
-  , HasAppEnvironment env
-  , MonadIO m
-  , MonadReader env m
+  ( MonadIO m
+  , MonadResetPassword m
+  , MonadUser m
   ) =>
   ActionT m ()
 postResetPasswordToken = do
@@ -118,20 +122,16 @@ postResetPasswordToken = do
   now <- liftIO getCurrentTime
   password <- formParam "password"
   passwordConfirmation <- formParam "password-confirmation"
-  mUser <- fmap (ResetPassword.getUser token now) <$> lift Db.getUsersForResetPassword
+  mUser <- ResetPassword.getUser token now <$> Effects.ResetPassword.getUsers
   let errorResponse = errorToast "Something went wrong, please try again."
   case mUser of
-    Right (Just user) ->
+    (Just user) ->
       if password == passwordConfirmation
         then do
           hashed <- Password.hashPassword password
-          results <- lift $ runExceptT $ do
-            ExceptT $ Db.updateUserPassword user.email hashed
-            ExceptT $ Db.removeAllUserTokens user.email
-          case results of
-            Right () -> do
-              setHeader "HX-Redirect" "/login"
-              html $ renderText $ addToast Success (span_ "You have successfully reset your password, you may now log in.")
-            Left _ -> errorResponse
+          Effects.User.updatePassword user.email hashed
+          Effects.ResetPassword.removeUserTokens user.email
+          setHeader "HX-Redirect" "/login"
+          html $ renderText $ addToast Success (span_ "You have successfully reset your password, you may now log in.")
         else errorResponse
     _ -> errorResponse

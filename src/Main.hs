@@ -1,18 +1,40 @@
 module Main (main) where
 
+import App (App, runApp)
+import AppError (AppError)
 import Configuration.Dotenv qualified as Dotenv
+import Control.Monad.Error.Class
 import Control.Monad.IO.Unlift (MonadUnliftIO)
-import Control.Monad.Random (MonadRandom)
+import Data.Text (pack)
 import Data.Text.IO qualified as TIO
-import Db qualified
-import Environment (Env (Dev), Environment (envAppEnvironment), HasAppEnvironment, HasAuthCookieName, HasBaseUrl, HasDbPath, HasSmtp)
+import Db.Init qualified as InitDb
+import Effects.Archive (MonadArchive)
+import Effects.Definition (MonadDefinition)
+import Effects.MyUUID (MonadMyUUID)
+import Effects.ResetPassword (MonadResetPassword)
+import Effects.Scratch (MonadScratch)
+import Effects.Session (MonadSession)
+import Effects.Time (MonadTime)
+import Effects.User
+import Environment (
+  Env (Dev),
+  Environment (envAppEnvironment),
+  HasAuthCookieName,
+  HasBaseUrl,
+  HasSmtp,
+ )
 import Handlers qualified
-import Model (ArchiveAction (..))
+import Html.Common (addToast)
+import Lucid
+import Model (AlertType (..), ArchiveAction (..))
+import Network.HTTP.Types (hContentType, status200)
+import Network.Wai (responseLBS)
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import Relude hiding (get)
 import System.Envy (decodeEnv)
 import System.IO (hPutStrLn)
+import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Trans
 
 main :: IO ()
@@ -24,13 +46,22 @@ main = do
       hPutStrLn stderr "Cannot start application, environment variables not set!"
       hPutStrLn stderr err
     Right environment -> do
-      results <- runReaderT Db.initialize environment
+      results <- runApp environment InitDb.initialize
       case results of
-        Left err -> TIO.putStrLn $ "There was a problem initializing the database: " <> err
+        Left err -> TIO.putStrLn $ "There was a problem initializing the database: " <> pack (show err)
         Right _ -> pure ()
-      scottyT 8080 (`runReaderT` environment) (appMiddleware environment >> webapp)
+      scottyT
+        8080
+        ( \app -> do
+            r <- runApp environment app
+            case r of
+              Right resp -> pure resp
+              Left _err -> do
+                pure $ responseLBS status200 [(hContentType, "text/html; charset=utf-8"), ("HX-Reswap", "none")] $ runIdentity $ renderBST $ addToast Error (span_ "There was an error processing the request. Please try again.")
+        )
+        (appMiddleware environment >> webapp)
 
-appMiddleware :: Environment -> ScottyT m ()
+appMiddleware :: Environment -> ScottyT App ()
 appMiddleware environment = do
   middleware $ staticPolicy (addBase "public")
   middleware $
@@ -41,17 +72,23 @@ appMiddleware environment = do
 webapp ::
   ( HasSmtp env
   , HasBaseUrl env
-  , HasAppEnvironment env
   , HasAuthCookieName env
-  , HasDbPath env
   , MonadUnliftIO m
   , MonadReader env m
-  , MonadRandom m
+  , MonadError AppError m
+  , MonadSession m
+  , MonadTime m
+  , MonadUser m
+  , MonadScratch m
+  , MonadArchive m
+  , MonadResetPassword m
+  , MonadDefinition m
+  , MonadMyUUID m
   ) =>
   ScottyT m ()
 webapp = do
-  get "/" Handlers.getHome
-  post "/" Handlers.postHome
+  get "/" (requiresAuth Handlers.getHome)
+  post "/" (requiresAuth Handlers.postHome)
   get "/login" Handlers.getLogin
   post "/login" Handlers.postLogin
   get "/toast/clear" Handlers.clearToast
@@ -62,12 +99,12 @@ webapp = do
   get "/reset-password/:token" Handlers.getResetPasswordToken
   post "/reset-password/validate" Handlers.postResetPasswordValidate
   post "/reset-password/:token" Handlers.postResetPasswordToken
-  delete "/session" Handlers.deleteSession
-  get "/archive" Handlers.getArchive
-  post "/archive/skip" (Handlers.postArchiveAction Skipped)
-  post "/archive/pay" (Handlers.postArchiveAction Paid)
-  get "/admin/definitions" Handlers.getDefinitionPage
-  get "/admin/definitions/new" Handlers.getDefinitionEdit
-  post "/admin/definitions/new" Handlers.postDefinitionEdit
-  get "/admin/definitions/:defId" Handlers.getDefinitionEdit
-  post "/admin/definitions/:defId" Handlers.postDefinitionEdit
+  delete "/session" (requiresAuth Handlers.deleteSession)
+  get "/archive" (requiresAuth Handlers.getArchive)
+  post "/archive/skip" (requiresAuth (Handlers.postArchiveAction Skipped))
+  post "/archive/pay" (requiresAuth (Handlers.postArchiveAction Paid))
+  get "/admin/definitions" (requiresAuth Handlers.getDefinitionPage)
+  get "/admin/definitions/new" (requiresAuth Handlers.getDefinitionEdit)
+  post "/admin/definitions/new" (requiresAuth Handlers.postDefinitionEdit)
+  get "/admin/definitions/:defId" (requiresAuth Handlers.getDefinitionEdit)
+  post "/admin/definitions/:defId" (requiresAuth Handlers.postDefinitionEdit)

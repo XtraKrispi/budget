@@ -3,7 +3,7 @@ module Model where
 import Data.Aeson (Encoding, FromJSON, ToJSON (toEncoding), defaultOptions, fieldLabelModifier, genericToEncoding)
 import Data.Text (toLower)
 import Data.Text.Lazy qualified as LT
-import Data.Time (Day)
+import Data.Time (Day, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Database.SQLite.Simple (SQLData (..))
 import Database.SQLite.Simple.FromField (FieldParser, FromField (..), ResultError (..), fieldData, returnError)
@@ -182,3 +182,5 @@ instance Parsable MyDay where
     case iso8601ParseM (LT.unpack date) of
       Just d -> Right (MyDay d)
       Nothing -> Left "Invalid date"
+
+newtype ExpirationTime = ExpirationTime {unExpirationTime :: UTCTime}

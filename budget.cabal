@@ -21,7 +21,24 @@ extra-source-files:
 executable budget
   main-is: Main.hs
   other-modules:
+      App
+      AppError
       Db
+      Db.Archive
+      Db.Definition
+      Db.Init
+      Db.Internal
+      Db.Scratch
+      Db.Session
+      Db.User
+      Effects.Archive
+      Effects.Definition
+      Effects.MyUUID
+      Effects.ResetPassword
+      Effects.Scratch
+      Effects.Session
+      Effects.Time
+      Effects.User
       Environment
       Handlers
       Handlers.Archive
@@ -69,10 +86,12 @@ executable budget
     , effectful
     , envy
     , format-numbers
+    , http-types
     , lens
     , lucid2
     , mime-mail
     , monad-logger
+    , mtl
     , password
     , raw-strings-qq
     , relude
@@ -83,6 +102,9 @@ executable budget
     , unliftio-core
     , uri-encode
     , uuid
+    , wai
     , wai-extra
     , wai-middleware-static
+  mixins:
+      base hiding (Prelude)
   default-language: GHC2021

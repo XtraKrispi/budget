@@ -1,24 +1,32 @@
 module Handlers.Session where
 
-import Db qualified
-import Environment (HasAppEnvironment, HasAuthCookieName (authCookieName), HasDbPath)
-import Model (SessionId (..))
+import AppError
+import Control.Monad.Error.Class (MonadError)
+import Effects.Session (MonadSession (logout))
+import Environment (HasAuthCookieName (authCookieName))
+import Model (SessionId (..), User)
 import MyUUID qualified
 import Relude
-import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Cookie (SetCookie (..), defaultSetCookie, getCookie, setCookie)
 import Web.Scotty.Trans (ActionT, setHeader)
 
-deleteSession :: (HasAuthCookieName env, HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => ActionT m ()
-deleteSession = requiresAuth \_user -> do
+deleteSession ::
+  ( MonadError AppError m
+  , MonadSession m
+  , MonadIO m
+  , MonadReader env m
+  , HasAuthCookieName env
+  ) =>
+  User ->
+  ActionT m ()
+deleteSession _ = do
   cookieName <- lift $ asks authCookieName
   cookie <- getCookie cookieName
   case cookie of
     Just val -> do
-      case MyUUID.fromText val of
-        Just uuid -> do
-          let sessionId = SessionId uuid
-          _ <- lift $ Db.deleteSession sessionId
+      case fmap SessionId (MyUUID.fromText val) of
+        Just sessionId -> do
+          _ <- Effects.Session.logout sessionId
           setCookie
             defaultSetCookie
               { setCookieName = encodeUtf8 cookieName

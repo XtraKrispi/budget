@@ -1,50 +1,52 @@
 module Web.Scotty.Auth where
 
-import Data.Time (addUTCTime, diffUTCTime, getCurrentTime, nominalDiffTimeToSeconds, secondsToNominalDiffTime)
-import Db qualified
-import Environment (HasAppEnvironment, HasAuthCookieName (authCookieName), HasDbPath)
+import Data.Time (
+  addUTCTime,
+  diffUTCTime,
+  nominalDiffTimeToSeconds,
+  secondsToNominalDiffTime,
+ )
+import Effects.Session (MonadSession (getSessionUser, slideSession))
+import Effects.Time (MonadTime (now))
+import Environment (HasAuthCookieName (authCookieName))
 import Htmx.Request qualified as Htmx
-import Model (SessionId (..), User)
+import Model (ExpirationTime (..), SessionId (..), User)
 import MyUUID qualified
 import Relude
 import Web.Scotty.Cookie (getCookie)
 import Web.Scotty.Trans (ActionT, redirect, setHeader)
 
 validateCookie ::
-  ( HasDbPath env
-  , HasAppEnvironment env
-  , MonadIO m
-  , MonadReader env m
+  ( MonadTime m
+  , MonadSession m
   ) =>
   Text ->
-  m (Either Text User)
+  m (Maybe User)
 validateCookie cookieVal =
-  case MyUUID.fromText cookieVal of
-    Just uuid -> do
-      let sessionId = SessionId uuid
-      eUser <- Db.getUserForSession sessionId
-      case eUser of
-        Right (user, expiration) -> do
-          now <- liftIO getCurrentTime
-          let difference = nominalDiffTimeToSeconds $ diffUTCTime expiration now
+  case fmap SessionId (MyUUID.fromText cookieVal) of
+    Just sessionId -> do
+      mUser <- getSessionUser sessionId
+      case mUser of
+        Nothing -> pure Nothing
+        Just (user, ExpirationTime expiration) -> do
+          n <- now
+          let difference = nominalDiffTimeToSeconds $ diffUTCTime expiration n
           if difference >= 0
             then do
-              when ((difference * 60) <= 10) do
-                _ <- Db.updateSession sessionId (addUTCTime (secondsToNominalDiffTime (20 * 60)) now)
-                pure ()
-              pure $ Right user
+              when ((difference * 60) <= 10) $
+                slideSession sessionId (ExpirationTime (addUTCTime (secondsToNominalDiffTime (20 * 60)) n))
+              pure $ Just user
             else do
-              pure (Left "Session expired")
-        _ -> pure (Left "Invalid session id")
+              pure Nothing
     Nothing -> do
-      pure (Left "Invalid session id")
+      pure Nothing
 
 requiresAuth ::
-  ( HasDbPath env
-  , HasAppEnvironment env
-  , HasAuthCookieName env
+  ( MonadReader env m
   , MonadIO m
-  , MonadReader env m
+  , HasAuthCookieName env
+  , MonadTime m
+  , MonadSession m
   ) =>
   (User -> ActionT m ()) ->
   ActionT m ()
@@ -55,9 +57,9 @@ requiresAuth route = do
     Just cookie -> do
       cookieResult <- lift $ validateCookie cookie
       case cookieResult of
-        Right user ->
+        Just user ->
           route user
-        Left _ ->
+        Nothing ->
           redirectTo "/login"
     Nothing ->
       -- Redirect to /login, but depends on how we got here (HTMX?)

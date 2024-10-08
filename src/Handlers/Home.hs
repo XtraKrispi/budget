@@ -1,19 +1,27 @@
 module Handlers.Home (getHome, postHome) where
 
 import Data.Time (Day, UTCTime (utctDay), addDays, addGregorianMonthsClip, getCurrentTime)
-import Db qualified
-import Environment (HasAppEnvironment, HasAuthCookieName, HasDbPath)
-import Handlers.Global (errorToast)
+import Effects.Archive (MonadArchive)
+import Effects.Archive qualified
+import Effects.Definition (MonadDefinition)
+import Effects.Definition qualified
+import Effects.Scratch
 import Html.Home qualified as Home
 import Htmx.Request (isBoosted, isHtmx)
 import Lucid (renderText)
 import Model
 import Relude
-import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Trans (ActionT, formParam, html)
 
-getHome :: (HasAuthCookieName env, HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => ActionT m ()
-getHome = requiresAuth \user -> do
+getHome ::
+  ( MonadIO m
+  , MonadDefinition m
+  , MonadArchive m
+  , MonadScratch m
+  ) =>
+  User ->
+  ActionT m ()
+getHome user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if not boosted && htmx
@@ -21,29 +29,37 @@ getHome = requiresAuth \user -> do
       homeContent user
     else html $ renderText $ Home.homePage user
 
-postHome :: (HasAuthCookieName env, HasAppEnvironment env, HasDbPath env, MonadIO m, MonadReader env m) => ActionT m ()
-postHome = requiresAuth \user -> do
+postHome ::
+  ( MonadIO m
+  , MonadDefinition m
+  , MonadArchive m
+  , MonadScratch m
+  ) =>
+  User ->
+  ActionT m ()
+postHome user = do
   endDate <- unMyDay <$> formParam "end-date"
   amountInBank <- formParam "amount-in-bank"
   amountLeftOver <- formParam "amount-left-over"
   let newScratch = Scratch endDate amountInBank amountLeftOver
-  _ <- lift $ Db.saveUserScratch user.email newScratch
+  Effects.Scratch.save user.email newScratch
   homeContent user
-  pure ()
 
-homeContent :: (HasAppEnvironment env, HasDbPath env, MonadReader env m, MonadIO m) => User -> ActionT m ()
+homeContent ::
+  ( MonadIO m
+  , MonadDefinition m
+  , MonadArchive m
+  , MonadScratch m
+  ) =>
+  User ->
+  ActionT m ()
 homeContent user = do
   defaultScratch <- (\now -> Scratch (addDays 21 now) 0 0) . utctDay <$> liftIO getCurrentTime
-  results <- lift $ runExceptT do
-    scratch <- ExceptT $ Db.getScratch user.email
-    definitions <- ExceptT $ Db.getAllDefinitions user.email
-    archive <- ExceptT $ Db.getAllArchive user.email
-    pure (fromMaybe defaultScratch scratch, definitions, archive)
-  case results of
-    Left _ -> errorToast "There was an issue fetching items, please refresh and try again."
-    Right (scratch, defs, archive) -> do
-      let items = getItems scratch.endDate defs archive
-      html $ renderText $ Home.homeContent items scratch
+  scratch <- fromMaybe defaultScratch <$> Effects.Scratch.get user.email
+  definitions <- Effects.Definition.getAll user.email
+  archive <- Effects.Archive.getAll user.email
+  let items = getItems scratch.endDate definitions archive
+  html $ renderText $ Home.homeContent items scratch
 
 getItems :: Day -> [Definition] -> [ArchivedItem] -> [Item]
 getItems endDate definitions archivedItems =
