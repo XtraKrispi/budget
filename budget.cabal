@@ -23,6 +23,7 @@ executable budget
   other-modules:
       App
       AppError
+      Auth
       Db
       Db.Archive
       Db.Definition
@@ -32,13 +33,19 @@ executable budget
       Db.Session
       Db.User
       Effects.Archive
+      Effects.Auth
+      Effects.Config
       Effects.Definition
+      Effects.Id
+      Effects.Mail
       Effects.MyUUID
+      Effects.Password
       Effects.ResetPassword
       Effects.Scratch
       Effects.Session
       Effects.Time
       Effects.User
+      Effects.WebServer
       Environment
       Handlers
       Handlers.Archive
@@ -65,7 +72,6 @@ executable budget
       ResetPassword
       Svg
       Web.Scotty.ActionT
-      Web.Scotty.Auth
       Paths_budget
   autogen-modules:
       Paths_budget
@@ -84,6 +90,7 @@ executable budget
     , data-default
     , dotenv
     , effectful
+    , effectful-th
     , envy
     , format-numbers
     , http-types

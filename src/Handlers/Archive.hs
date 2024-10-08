@@ -1,54 +1,64 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Handlers.Archive where
 
 import Effects.Archive
 import Effects.MyUUID (MonadMyUUID (generate))
 import Effects.Time (MonadTime (..))
+import Effects.WebServer (MonadWebServer (..))
+import Handlers.Global (errorToast)
 import Html.Archive qualified as Archive
 import Htmx.Request (isBoosted, isHtmx)
 import Id
-import Lucid
 import Model (ArchiveAction, ArchivedItem (..), MyDay (unMyDay), User (email))
 import Relude
-import Web.Scotty.Trans (ActionT, formParam, html, setHeader)
 
 getArchive ::
   ( MonadArchive m
-  , MonadIO m
+  , MonadWebServer m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 getArchive user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if htmx && not boosted
     then do
       items <- Effects.Archive.getAll user.email
-      html $ renderText $ Archive.items items
+      serveHtml $ Archive.items items
     else do
-      html $ renderText $ Archive.archivePage user
+      serveHtml $ Archive.archivePage user
 
 postArchiveAction ::
   ( MonadIO m
   , MonadMyUUID m
   , MonadTime m
   , MonadArchive m
+  , MonadWebServer m
   ) =>
   ArchiveAction ->
   User ->
-  ActionT m ()
+  m ()
 postArchiveAction archivedItemAction user = do
-  archivedItemAmount <- formParam "itemAmount"
-  archivedItemDate <- unMyDay <$> formParam "itemDate"
-  archivedItemItemDefinitionId <- formParam "itemDefinitionId"
-  archivedItemDescription <- formParam "itemDescription"
+  mArchivedItemAmount <- fromForm "itemAmount"
+  mArchivedItemDate <- fmap unMyDay <$> fromForm "itemDate"
+  mArchivedItemItemDefinitionId <- fromForm "itemDefinitionId"
+  mArchivedItemDescription <- fromForm "itemDescription"
 
   archivedItemId <- Id <$> generate
   archivedItemActionDate <- today
 
-  let item = ArchivedItem{..}
+  let item =
+        ArchivedItem archivedItemId
+          <$> mArchivedItemItemDefinitionId
+          <*> mArchivedItemDescription
+          <*> mArchivedItemAmount
+          <*> mArchivedItemDate
+          <*> pure archivedItemActionDate
+          <*> pure archivedItemAction
 
-  insertArchive user.email item
+  case item of
+    Just i -> do
+      insertArchive user.email i
 
-  setHeader "HX-Trigger" "reload"
+      setResponseHeader "HX-Trigger" "reload"
+    Nothing ->
+      errorToast "There was an issue with the request, please try again."

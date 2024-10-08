@@ -1,65 +1,73 @@
 module Handlers.Home (getHome, postHome) where
 
-import Data.Time (Day, UTCTime (utctDay), addDays, addGregorianMonthsClip, getCurrentTime)
+import Data.Time (Day, addDays, addGregorianMonthsClip)
 import Effects.Archive (MonadArchive)
 import Effects.Archive qualified
 import Effects.Definition (MonadDefinition)
 import Effects.Definition qualified
 import Effects.Scratch
+import Effects.Time
+import Effects.WebServer (MonadWebServer (fromForm, serveHtml))
+import Handlers.Global (errorToast)
 import Html.Home qualified as Home
 import Htmx.Request (isBoosted, isHtmx)
-import Lucid (renderText)
 import Model
 import Relude
-import Web.Scotty.Trans (ActionT, formParam, html)
 
 getHome ::
-  ( MonadIO m
+  ( MonadWebServer m
   , MonadDefinition m
   , MonadArchive m
   , MonadScratch m
+  , MonadTime m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 getHome user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if not boosted && htmx
     then do
       homeContent user
-    else html $ renderText $ Home.homePage user
+    else serveHtml $ Home.homePage user
 
 postHome ::
-  ( MonadIO m
+  ( MonadWebServer m
   , MonadDefinition m
   , MonadArchive m
   , MonadScratch m
+  , MonadTime m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 postHome user = do
-  endDate <- unMyDay <$> formParam "end-date"
-  amountInBank <- formParam "amount-in-bank"
-  amountLeftOver <- formParam "amount-left-over"
-  let newScratch = Scratch endDate amountInBank amountLeftOver
-  Effects.Scratch.save user.email newScratch
-  homeContent user
+  endDate <- fmap unMyDay <$> fromForm "end-date"
+  amountInBank <- fromForm "amount-in-bank"
+  amountLeftOver <- fromForm "amount-left-over"
+
+  let newScratch = Scratch <$> endDate <*> amountInBank <*> amountLeftOver
+  case newScratch of
+    Just scratch -> do
+      Effects.Scratch.save user.email scratch
+      homeContent user
+    Nothing -> errorToast "There was an issue with your request, please try again."
 
 homeContent ::
-  ( MonadIO m
+  ( MonadWebServer m
   , MonadDefinition m
   , MonadArchive m
   , MonadScratch m
+  , MonadTime m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 homeContent user = do
-  defaultScratch <- (\now -> Scratch (addDays 21 now) 0 0) . utctDay <$> liftIO getCurrentTime
+  defaultScratch <- (\t -> Scratch (addDays 21 t) 0 0) <$> today
   scratch <- fromMaybe defaultScratch <$> Effects.Scratch.get user.email
   definitions <- Effects.Definition.getAll user.email
   archive <- Effects.Archive.getAll user.email
   let items = getItems scratch.endDate definitions archive
-  html $ renderText $ Home.homeContent items scratch
+  serveHtml $ Home.homeContent items scratch
 
 getItems :: Day -> [Definition] -> [ArchivedItem] -> [Item]
 getItems endDate definitions archivedItems =

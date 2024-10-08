@@ -12,16 +12,25 @@ import Db.Scratch qualified as ScratchDb
 import Db.Session qualified as SessionDb
 import Db.User qualified as UserDb
 import Effects.Archive (MonadArchive (..))
+import Effects.Config (MonadConfig, getBaseUrl)
 import Effects.Definition
+import Effects.Id
+import Effects.Mail
 import Effects.MyUUID
+import Effects.Password
 import Effects.ResetPassword (MonadResetPassword (..))
 import Effects.Scratch (MonadScratch (..))
 import Effects.Session
 import Effects.Time
 import Effects.User (MonadUser (..))
-import Environment (Environment)
+import Environment
+import Id qualified
+import Lucid
 import Model
 import MyUUID (nextRandom)
+import Network.Mail.Mime (htmlPart)
+import Network.Mail.SMTP (Address (..), sendMailWithLoginTLS, simpleMail)
+import Password qualified
 import Relude
 import ResetPassword
 
@@ -92,3 +101,30 @@ instance MonadDefinition App where
 
 instance MonadMyUUID App where
   generate = MyUUID.nextRandom
+
+instance MonadId App where
+  generate = Id.newId
+
+instance MonadMail App where
+  sendMail to (Subject subject) body =
+    do
+      smtpConfig <- asks smtp
+      let mail =
+            simpleMail
+              ( Address
+                  (Just smtpConfig.smtpFromName)
+                  smtpConfig.smtpFromEmail
+              )
+              [Address Nothing (unEmail to)]
+              []
+              []
+              subject
+              [htmlPart (renderText body)]
+      liftIO $
+        sendMailWithLoginTLS smtpConfig.smtpHostname smtpConfig.smtpUsername smtpConfig.smtpPassword mail
+
+instance MonadConfig App where
+  getBaseUrl = asks baseUrl
+
+instance MonadPassword App where
+  hashPassword = Password.hashPassword

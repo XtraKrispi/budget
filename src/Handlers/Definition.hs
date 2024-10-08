@@ -5,45 +5,44 @@ module Handlers.Definition where
 import Effects.Definition (MonadDefinition)
 import Effects.Definition qualified
 import Effects.Definition qualified as Effect.Definition
+import Effects.Id
 import Effects.Time (MonadTime)
 import Effects.Time qualified
+import Effects.WebServer (MonadWebServer (..))
 import Handlers.Global (errorToast)
 import Html.Definition (definitions, definitionsModal, definitionsPage)
 import Htmx.Request (isBoosted, isHtmx)
-import Id qualified
-import Lucid
 import Model
 import Relude
-import Web.Scotty.ActionT (captureParamMaybe, optionalFormParam, toggleFormParam)
-import Web.Scotty.Trans (ActionT, formParam, html, setHeader)
 
 getDefinitionPage ::
-  ( MonadIO m
-  , MonadDefinition m
+  ( MonadDefinition m
+  , MonadWebServer m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 getDefinitionPage user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if htmx && not boosted
     then do
       ds <- Effects.Definition.getAll user.email
-      html $ renderText $ definitions ds
+      serveHtml $ definitions ds
     else do
-      html $ renderText $ definitionsPage user
+      serveHtml $ definitionsPage user
 
 getDefinitionEdit ::
-  ( MonadIO m
+  ( MonadWebServer m
   , MonadTime m
   , MonadDefinition m
+  , MonadId m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 getDefinitionEdit _user = do
-  mId <- captureParamMaybe "defId"
+  mId <- fromUrl "defId"
   today <- Effects.Time.today
-  newId <- Id.newId
+  newId <- Effects.Id.generate
   mDefinition <- case mId of
     Just i -> Effects.Definition.getOne i
     Nothing ->
@@ -61,23 +60,36 @@ getDefinitionEdit _user = do
 
   case mDefinition of
     (Just definition) -> do
-      setHeader "HX-Trigger-After-Settle" "showDefinitionsModal"
-      html $ renderText $ definitionsModal $ Just definition
+      setResponseHeader "HX-Trigger-After-Settle" "showDefinitionsModal"
+      serveHtml $ definitionsModal $ Just definition
     _ -> errorToast "There was an issue fetching the definition.  Please try again."
 
 postDefinitionEdit ::
-  ( MonadIO m
+  ( MonadWebServer m
   , MonadDefinition m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 postDefinitionEdit user = do
-  definitionId <- formParam "id"
-  definitionDescription <- formParam "description"
-  definitionAmount <- formParam "amount"
-  definitionFrequency <- formParam "frequency"
-  definitionIsAutomaticWithdrawal <- toggleFormParam "is-automatic-withdrawal"
-  definitionStartDate <- unMyDay <$> formParam "start-date"
-  definitionEndDate <- fmap unMyDay <$> optionalFormParam "end-date"
-  Effect.Definition.save user.email Definition{..}
-  setHeader "HX-Trigger" "hideDefinitionsModal, reload"
+  definitionId <- fromForm "id"
+  definitionDescription <- fromForm "description"
+  definitionAmount <- fromForm "amount"
+  definitionFrequency <- fromForm "frequency"
+  definitionIsAutomaticWithdrawal <- fmap (== ("on" :: Text)) <$> fromForm "is-automatic-withdrawal"
+  definitionStartDate <- fmap unMyDay <$> fromForm "start-date"
+  definitionEndDate <- fmap unMyDay <$> fromForm "end-date"
+  let mDefinition =
+        Definition
+          <$> definitionId
+          <*> definitionDescription
+          <*> definitionAmount
+          <*> definitionFrequency
+          <*> definitionStartDate
+          <*> pure definitionEndDate
+          <*> definitionIsAutomaticWithdrawal
+
+  case mDefinition of
+    Just def -> do
+      Effect.Definition.save user.email def
+      setResponseHeader "HX-Trigger" "hideDefinitionsModal, reload"
+    Nothing -> errorToast "There was an issue saving the definition. Please try again."

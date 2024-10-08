@@ -1,16 +1,18 @@
 module Handlers.Global where
 
+import Effects.WebServer
 import Html.Common (addToast)
-import Lucid (ToHtml (..), renderText, span_)
+import Lucid (ToHtml (..), span_)
 import Model (AlertType (..))
 import Relude
-import Web.Scotty.Trans (ActionT, html, setHeader)
 
-clearToast :: (MonadIO m) => ActionT m ()
-clearToast =
-  html $ renderText ""
+clearToast :: (MonadWebServer m) => m ()
+clearToast = serveHtml ""
 
-errorToast :: (MonadIO m) => Text -> ActionT m ()
+errorToast :: (MonadWebServer m) => Text -> m ()
 errorToast msg = do
-  setHeader "HX-Reswap" "none"
-  html $ renderText $ addToast Error (span_ (toHtml msg))
+  setResponseHeader "HX-Reswap" "none"
+  serveHtml $ addToast Error (span_ (toHtml msg))
+
+unknownErrorToast :: (MonadWebServer m) => m ()
+unknownErrorToast = errorToast "An unknown error has occurred. Please try again."

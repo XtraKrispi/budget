@@ -27,6 +27,7 @@ dependencies:
   - data-default
   - dotenv
   - effectful
+  - effectful-th
   - envy
   - format-numbers
   - http-types

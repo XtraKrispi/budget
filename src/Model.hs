@@ -13,6 +13,7 @@ import Database.SQLite.Simple.ToField (ToField (..))
 import Id
 import MyUUID
 import Relude
+import Text.Read
 import Web.Scotty (Parsable (..))
 
 data PlainText
@@ -20,6 +21,9 @@ data Hashed
 
 newtype Password a = Password {unPassword :: Text}
   deriving (Show, Eq)
+
+instance Read (Password PlainText) where
+  readsPrec _ input = [(Password (Relude.toText input), "")]
 
 instance ToField (Password Hashed) where
   toField :: Password Hashed -> SQLData
@@ -34,6 +38,9 @@ instance FromField (Password Hashed) where
 
 newtype Token a = Token {unToken :: Text}
   deriving (Show, Eq)
+
+instance Read (Token PlainText) where
+  readsPrec _ input = [(Token (Relude.toText input), "")]
 
 instance ToField (Token Hashed) where
   toField :: Token Hashed -> SQLData
@@ -57,6 +64,9 @@ instance Parsable (Password PlainText) where
 newtype Email = Email {unEmail :: Text}
   deriving (Show, FromField, Parsable)
 
+instance Read Email where
+  readsPrec _ input = [(Email (Relude.toText input), "")]
+
 instance ToField Email where
   toField :: Email -> SQLData
   toField (Email email) = SQLText (toLower email)
@@ -66,7 +76,7 @@ data User = User
   , name :: Text
   , passwordHash :: Password Hashed
   }
-  deriving (Generic)
+  deriving (Generic, Show)
 instance FromRow User
 
 data AlertType
@@ -175,6 +185,12 @@ instance FromJSON Item
 
 newtype MyDay = MyDay {unMyDay :: Day}
   deriving (Show)
+
+instance Read MyDay where
+  readsPrec :: Int -> ReadS MyDay
+  readsPrec _ input = case iso8601ParseM input of
+    Just d -> [(MyDay d, "")]
+    Nothing -> []
 
 instance Parsable MyDay where
   parseParam :: LT.Text -> Either LT.Text MyDay

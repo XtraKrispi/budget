@@ -1,40 +1,24 @@
 module Handlers.Session where
 
-import AppError
-import Control.Monad.Error.Class (MonadError)
+import Effects.Auth
 import Effects.Session (MonadSession (logout))
-import Environment (HasAuthCookieName (authCookieName))
-import Model (SessionId (..), User)
-import MyUUID qualified
+import Effects.WebServer
+import Model (User)
 import Relude
-import Web.Scotty.Cookie (SetCookie (..), defaultSetCookie, getCookie, setCookie)
-import Web.Scotty.Trans (ActionT, setHeader)
 
 deleteSession ::
-  ( MonadError AppError m
-  , MonadSession m
-  , MonadIO m
-  , MonadReader env m
-  , HasAuthCookieName env
+  ( MonadSession m
+  , MonadWebServer m
+  , MonadAuth m
   ) =>
   User ->
-  ActionT m ()
+  m ()
 deleteSession _ = do
-  cookieName <- lift $ asks authCookieName
-  cookie <- getCookie cookieName
-  case cookie of
-    Just val -> do
-      case fmap SessionId (MyUUID.fromText val) of
-        Just sessionId -> do
-          _ <- Effects.Session.logout sessionId
-          setCookie
-            defaultSetCookie
-              { setCookieName = encodeUtf8 cookieName
-              , setCookieValue = encodeUtf8 val
-              , setCookieMaxAge = Just (-100)
-              , setCookieHttpOnly = True
-              , setCookieSecure = True
-              }
-        Nothing -> pure ()
+  mSessionId <- getAuthCookie
+  case mSessionId of
+    Just sessionId -> do
+      Effects.Session.logout sessionId
+      invalidateAuthCookie
     Nothing -> pure ()
-  setHeader "HX-Redirect" "/"
+
+  setResponseHeader "HX-Redirect" "/"

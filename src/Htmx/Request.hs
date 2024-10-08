@@ -1,10 +1,10 @@
 module Htmx.Request where
 
+import Effects.WebServer
 import Relude
-import Web.Scotty.Trans (ActionT, header)
 
-isHtmx :: (MonadIO m) => ActionT m Bool
-isHtmx = isJust <$> header "HX-Request"
+isHtmx :: (MonadWebServer m) => m Bool
+isHtmx = isJust <$> getRequestHeader "HX-Request"
 
-isBoosted :: (MonadIO m) => ActionT m Bool
-isBoosted = isJust <$> header "HX-Boosted"
+isBoosted :: (MonadWebServer m) => m Bool
+isBoosted = isJust <$> getRequestHeader "HX-Boosted"

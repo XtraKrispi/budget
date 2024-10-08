@@ -1,16 +1,19 @@
 module Main (main) where
 
 import App (App, runApp)
-import AppError (AppError)
+import Auth (requiresAuth)
 import Configuration.Dotenv qualified as Dotenv
-import Control.Monad.Error.Class
 import Control.Monad.IO.Unlift (MonadUnliftIO)
 import Data.Text (pack)
 import Data.Text.IO qualified as TIO
 import Db.Init qualified as InitDb
 import Effects.Archive (MonadArchive)
+import Effects.Config
 import Effects.Definition (MonadDefinition)
+import Effects.Id
+import Effects.Mail
 import Effects.MyUUID (MonadMyUUID)
+import Effects.Password
 import Effects.ResetPassword (MonadResetPassword)
 import Effects.Scratch (MonadScratch)
 import Effects.Session (MonadSession)
@@ -20,8 +23,6 @@ import Environment (
   Env (Dev),
   Environment (envAppEnvironment),
   HasAuthCookieName,
-  HasBaseUrl,
-  HasSmtp,
  )
 import Handlers qualified
 import Html.Common (addToast)
@@ -34,7 +35,6 @@ import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import Relude hiding (get)
 import System.Envy (decodeEnv)
 import System.IO (hPutStrLn)
-import Web.Scotty.Auth (requiresAuth)
 import Web.Scotty.Trans
 
 main :: IO ()
@@ -70,12 +70,7 @@ appMiddleware environment = do
       else logStdout
 
 webapp ::
-  ( HasSmtp env
-  , HasBaseUrl env
-  , HasAuthCookieName env
-  , MonadUnliftIO m
-  , MonadReader env m
-  , MonadError AppError m
+  ( MonadUnliftIO m
   , MonadSession m
   , MonadTime m
   , MonadUser m
@@ -84,6 +79,12 @@ webapp ::
   , MonadResetPassword m
   , MonadDefinition m
   , MonadMyUUID m
+  , MonadPassword m
+  , MonadConfig m
+  , MonadMail m
+  , MonadId m
+  , MonadReader env m
+  , HasAuthCookieName env
   ) =>
   ScottyT m ()
 webapp = do
