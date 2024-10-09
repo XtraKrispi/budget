@@ -19,6 +19,7 @@ default-extensions:
   - BlockArguments
   - OverloadedRecordDot
   - NoImplicitPrelude
+  - LambdaCase
 
 dependencies:
   - name: base

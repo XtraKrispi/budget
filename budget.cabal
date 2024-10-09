@@ -82,6 +82,7 @@ executable budget
       BlockArguments
       OverloadedRecordDot
       NoImplicitPrelude
+      LambdaCase
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       MonadRandom
