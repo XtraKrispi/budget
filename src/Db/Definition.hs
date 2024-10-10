@@ -3,15 +3,17 @@
 
 module Db.Definition where
 
+import Data.Maybe (listToMaybe)
 import Database.SQLite.Simple (Only (..), execute, query)
-import Db
 import Db.Internal
+import Effectful
+import Effectful.Reader.Static (Reader)
+import Environment
 import Id
 import Model
-import Relude
 import Text.RawString.QQ
 
-getAllDefinitions :: (WithDb env m) => Email -> m [Definition]
+getAllDefinitions :: (IOE :> es, Reader Environment :> es) => Email -> Eff es [Definition]
 getAllDefinitions email = runDb \conn ->
   query
     conn
@@ -29,10 +31,11 @@ getAllDefinitions email = runDb \conn ->
     (Only email)
 
 getDefinitionById ::
-  (WithDb env m) =>
+  (IOE :> es, Reader Environment :> es) =>
+  Email ->
   Id Definition ->
-  m (Maybe Definition)
-getDefinitionById defId = runDb \conn -> do
+  Eff es (Maybe Definition)
+getDefinitionById email defId = runDb \conn -> do
   listToMaybe
     <$> query
       conn
@@ -43,14 +46,15 @@ getDefinitionById defId = runDb \conn -> do
         , start_date
         , end_date
         , is_automatic_withdrawal
-   FROM definitions
-   WHERE identifier LIKE ?|]
-      (Only defId)
+   FROM definitions d
+   JOIN users u ON d.user_id = u.id
+   WHERE identifier LIKE ? AND u.email = ?|]
+      (defId, email)
 
 upsertDefinition ::
-  (WithDb env m) => Email -> Definition -> m ()
+  (IOE :> es, Reader Environment :> es) => Email -> Definition -> Eff es ()
 upsertDefinition email (Definition{..}) = do
-  mDef <- getDefinitionById definitionId
+  mDef <- getDefinitionById email definitionId
   let sql = case mDef of
         Just _ ->
           [r| UPDATE definitions

@@ -1,13 +1,18 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module Effects.Mail where
 
+import Data.Text (Text)
+import Effectful
+import Effectful.TH (makeEffect)
 import Lucid
 import Model (Email)
-import Relude
 
 newtype Subject = Subject {unSubject :: Text}
 
-class (Monad m) => MonadMail m where
-  sendMail :: Email -> Subject -> Html () -> m ()
+data Mail :: Effect where
+  SendMail :: Email -> Subject -> Html () -> Mail m ()
 
-instance (MonadTrans outer, MonadMail inner) => MonadMail (outer inner) where
-  sendMail to subject body = lift $ sendMail to subject body
+makeEffect ''Mail

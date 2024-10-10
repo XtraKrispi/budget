@@ -1,14 +1,17 @@
 module Handlers.Login where
 
+import Auth qualified
+import Control.Monad.Trans (lift)
 import Data.Time (
   addUTCTime,
   secondsToNominalDiffTime,
  )
-import Effects.Auth (MonadAuth (setAuthCookie))
-import Effects.Session
+import Effectful
+import Effectful.Reader.Static (Reader)
+import Effects.SessionStore
 import Effects.Time
-import Effects.User (MonadUser (..))
-import Effects.WebServer
+import Effects.UserStore
+import Environment (Environment)
 import Handlers.Global (errorToast)
 import Html.Login qualified as Login
 import Model (
@@ -16,36 +19,33 @@ import Model (
   User (..),
  )
 import Password qualified
-import Relude
+import Web.Scotty.ActionT (renderHtml)
+import Web.Scotty.Trans (ActionT, formParam, setHeader)
 
-getLogin :: (MonadWebServer m) => m ()
-getLogin = serveHtml Login.fullPage
+getLogin :: (IOE :> es) => ActionT (Eff es) ()
+getLogin = renderHtml Login.fullPage
 
 postLogin ::
-  ( MonadSession m
-  , MonadWebServer m
-  , MonadUser m
-  , MonadTime m
-  , MonadAuth m
+  ( SessionStore :> es
+  , UserStore :> es
+  , Time :> es
+  , Reader Environment :> es
+  , IOE :> es
   ) =>
-  m ()
+  ActionT (Eff es) ()
 postLogin = do
-  mEmail <- fromForm "email"
-  mPassword <- fromForm "password"
+  email <- formParam "email"
+  password <- formParam "password"
+  mUser <- lift $ Effects.UserStore.get email
 
-  case (mEmail, mPassword) of
-    (Just email, Just password) -> do
-      mUser <- getUser email
-
-      case mUser of
-        Just user -> do
-          let isValid = Password.validatePassword user.passwordHash password
-          if isValid
-            then do
-              expirationTime <- ExpirationTime . addUTCTime (secondsToNominalDiffTime (20 * 60)) <$> now
-              sessionId <- newSession email expirationTime
-              setAuthCookie sessionId
-              setResponseHeader "HX-Redirect" "/"
-            else errorToast "There was a problem logging in, please try again."
-        _ -> errorToast "There was a problem logging in, please try again."
+  case mUser of
+    Just user -> do
+      let isValid = Password.validatePassword user.passwordHash password
+      if isValid
+        then do
+          expirationTime <- lift $ ExpirationTime . addUTCTime (secondsToNominalDiffTime (20 * 60)) <$> now
+          sessionId <- lift $ newSession email expirationTime
+          Auth.setAuthCookie sessionId
+          setHeader "HX-Redirect" "/"
+        else errorToast "There was a problem logging in, please try again."
     _ -> errorToast "There was a problem logging in, please try again."

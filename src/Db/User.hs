@@ -2,23 +2,26 @@
 
 module Db.User where
 
+import Data.Maybe (listToMaybe)
+import Data.Text (Text)
 import Data.Time (UTCTime)
 import Database.SQLite.Simple (Only (..), execute, query, query_)
-import Db
 import Db.Internal
+import Effectful
+import Effectful.Reader.Static (Reader)
+import Environment
 import Model
-import Relude
 import Text.RawString.QQ
 
-getUserByEmail :: (WithDb env m) => Email -> m (Maybe User)
+getUserByEmail :: (IOE :> es, Reader Environment :> es) => Email -> Eff es (Maybe User)
 getUserByEmail email = do
   runDb $ \conn -> listToMaybe <$> query conn "SELECT email, name, password_hash FROM users WHERE email = ?" (Only email)
 
-insertUser :: (WithDb env m) => User -> m ()
+insertUser :: (IOE :> es, Reader Environment :> es) => User -> Eff es ()
 insertUser user =
   runDb $ \conn -> execute conn "INSERT INTO users(email, name, password_hash) VALUES(?, ?, ?)" (user.email, user.name, unPassword user.passwordHash)
 
-insertResetToken :: (WithDb env m) => Email -> Token Hashed -> UTCTime -> m (Maybe ())
+insertResetToken :: (IOE :> es, Reader Environment :> es) => Email -> Token Hashed -> UTCTime -> Eff es (Maybe ())
 insertResetToken email token expiry = do
   results :: [Only Text] <- runDb \conn ->
     query
@@ -34,7 +37,7 @@ insertResetToken email token expiry = do
     [] -> pure Nothing
     _ -> pure $ Just ()
 
-getUsersForResetPassword :: (WithDb env m) => m [(User, UTCTime, Token Hashed)]
+getUsersForResetPassword :: (IOE :> es, Reader Environment :> es) => Eff es [(User, UTCTime, Token Hashed)]
 getUsersForResetPassword = do
   runDb \conn -> do
     results <-
@@ -54,7 +57,7 @@ getUsersForResetPassword = do
       )
         <$> results
 
-updateUserPassword :: (WithDb env m) => Email -> Password Hashed -> m ()
+updateUserPassword :: (IOE :> es, Reader Environment :> es) => Email -> Password Hashed -> Eff es ()
 updateUserPassword email password =
   runDb \conn ->
     execute
@@ -64,7 +67,7 @@ updateUserPassword email password =
           WHERE email = ?;|]
       (password, email)
 
-removeAllUserTokens :: (WithDb env m) => Email -> m ()
+removeAllUserTokens :: (IOE :> es, Reader Environment :> es) => Email -> Eff es ()
 removeAllUserTokens email = runDb \conn ->
   execute
     conn

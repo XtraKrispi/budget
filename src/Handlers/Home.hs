@@ -1,73 +1,71 @@
 module Handlers.Home (getHome, postHome) where
 
+import Control.Monad.Trans (lift)
+import Data.List (sortOn)
+import Data.Maybe (fromMaybe)
 import Data.Time (Day, addDays, addGregorianMonthsClip)
-import Effects.Archive (MonadArchive)
-import Effects.Archive qualified
-import Effects.Definition (MonadDefinition)
-import Effects.Definition qualified
-import Effects.Scratch
+import Effectful
+import Effects.ArchiveStore
+import Effects.DefinitionStore
+import Effects.ScratchStore
 import Effects.Time
-import Effects.WebServer (MonadWebServer (fromForm, serveHtml))
-import Handlers.Global (errorToast)
 import Html.Home qualified as Home
 import Htmx.Request (isBoosted, isHtmx)
 import Model
-import Relude
+import Web.Scotty.ActionT (renderHtml)
+import Web.Scotty.Trans (ActionT, formParam)
 
 getHome ::
-  ( MonadWebServer m
-  , MonadDefinition m
-  , MonadArchive m
-  , MonadScratch m
-  , MonadTime m
+  ( DefinitionStore :> es
+  , Time :> es
+  , ArchiveStore :> es
+  , ScratchStore :> es
+  , IOE :> es
   ) =>
   User ->
-  m ()
+  ActionT (Eff es) ()
 getHome user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if not boosted && htmx
     then do
       homeContent user
-    else serveHtml $ Home.homePage user
+    else renderHtml $ Home.homePage user
 
 postHome ::
-  ( MonadWebServer m
-  , MonadDefinition m
-  , MonadArchive m
-  , MonadScratch m
-  , MonadTime m
+  ( DefinitionStore :> es
+  , ArchiveStore :> es
+  , ScratchStore :> es
+  , Time :> es
+  , IOE :> es
   ) =>
   User ->
-  m ()
+  ActionT (Eff es) ()
 postHome user = do
-  endDate <- fmap unMyDay <$> fromForm "end-date"
-  amountInBank <- fromForm "amount-in-bank"
-  amountLeftOver <- fromForm "amount-left-over"
+  endDate <- unMyDay <$> formParam "end-date"
+  amountInBank <- formParam "amount-in-bank"
+  amountLeftOver <- formParam "amount-left-over"
 
-  let newScratch = Scratch <$> endDate <*> amountInBank <*> amountLeftOver
-  case newScratch of
-    Just scratch -> do
-      Effects.Scratch.save user.email scratch
-      homeContent user
-    Nothing -> errorToast "There was an issue with your request, please try again."
+  let scratch = Scratch endDate amountInBank amountLeftOver
+  lift $ Effects.ScratchStore.save user.email scratch
+  homeContent user
 
 homeContent ::
-  ( MonadWebServer m
-  , MonadDefinition m
-  , MonadArchive m
-  , MonadScratch m
-  , MonadTime m
+  ( DefinitionStore :> es
+  , ArchiveStore :> es
+  , ScratchStore :> es
+  , Time :> es
+  , IOE :> es
   ) =>
   User ->
-  m ()
+  ActionT (Eff es) ()
 homeContent user = do
-  defaultScratch <- (\t -> Scratch (addDays 21 t) 0 0) <$> today
-  scratch <- fromMaybe defaultScratch <$> Effects.Scratch.get user.email
-  definitions <- Effects.Definition.getAll user.email
-  archive <- Effects.Archive.getAll user.email
+  defaultScratch <- lift $ (\t -> Scratch (addDays 21 t) 0 0) <$> today
+  scratch <- lift $ fromMaybe defaultScratch <$> Effects.ScratchStore.get user.email
+  definitions <- lift $ Effects.DefinitionStore.getAll user.email
+  archive <- lift $ Effects.ArchiveStore.getAll user.email
   let items = getItems scratch.endDate definitions archive
-  serveHtml $ Home.homeContent items scratch
+  renderHtml $ Home.homeContent items scratch
 
 getItems :: Day -> [Definition] -> [ArchivedItem] -> [Item]
 getItems endDate definitions archivedItems =

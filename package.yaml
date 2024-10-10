@@ -18,13 +18,15 @@ default-extensions:
   - OverloadedStrings
   - BlockArguments
   - OverloadedRecordDot
-  - NoImplicitPrelude
   - LambdaCase
+  - GADTs
+  - TypeFamilies
+  - DataKinds
 
 dependencies:
-  - name: base
-    version: ">= 4.7 && < 5"
+  - base >= 4.7 && < 5
   - aeson
+  - containers
   - data-default
   - dotenv
   - effectful
@@ -40,11 +42,12 @@ dependencies:
   - mtl
   - password
   - raw-strings-qq
-  - relude
   - scotty
   - smtp-mail
   - sqlite-simple
+  - text
   - time
+  - transformers
   - unliftio-core
   - uri-encode
   - uuid

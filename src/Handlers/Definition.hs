@@ -1,50 +1,47 @@
-{-# LANGUAGE RecordWildCards #-}
-
 module Handlers.Definition where
 
-import Effects.Definition (MonadDefinition)
-import Effects.Definition qualified
-import Effects.Definition qualified as Effect.Definition
-import Effects.Id
-import Effects.Time (MonadTime)
+import Control.Monad.Trans (lift)
+import Effectful
+import Effects.DefinitionStore
+import Effects.DefinitionStore qualified as Effect.DefinitionStore
+import Effects.MakeId
+import Effects.Time (Time)
 import Effects.Time qualified
-import Effects.WebServer (MonadWebServer (..))
 import Handlers.Global (errorToast)
 import Html.Definition (definitions, definitionsModal, definitionsPage)
 import Htmx.Request (isBoosted, isHtmx)
 import Model
-import Relude
+import Web.Scotty.ActionT (captureParamMaybe, optionalFormParam, renderHtml, toggleFormParam)
+import Web.Scotty.Trans (ActionT, formParam, setHeader)
 
 getDefinitionPage ::
-  ( MonadDefinition m
-  , MonadWebServer m
-  ) =>
+  (DefinitionStore :> es, IOE :> es) =>
   User ->
-  m ()
+  ActionT (Eff es) ()
 getDefinitionPage user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if htmx && not boosted
     then do
-      ds <- Effects.Definition.getAll user.email
-      serveHtml $ definitions ds
+      ds <- lift $ Effects.DefinitionStore.getAll user.email
+      renderHtml $ definitions ds
     else do
-      serveHtml $ definitionsPage user
+      renderHtml $ definitionsPage user
 
 getDefinitionEdit ::
-  ( MonadWebServer m
-  , MonadTime m
-  , MonadDefinition m
-  , MonadId m
+  ( Time :> es
+  , DefinitionStore :> es
+  , MakeId :> es
+  , IOE :> es
   ) =>
   User ->
-  m ()
-getDefinitionEdit _user = do
-  mId <- fromUrl "defId"
-  today <- Effects.Time.today
-  newId <- Effects.Id.generate
+  ActionT (Eff es) ()
+getDefinitionEdit user = do
+  mId <- captureParamMaybe "defId"
+  today <- lift Effects.Time.today
+  newId <- lift Effects.MakeId.generate
   mDefinition <- case mId of
-    Just i -> Effects.Definition.getOne i
+    Just i -> lift $ Effects.DefinitionStore.get user.email i
     Nothing ->
       pure $
         pure $
@@ -60,36 +57,33 @@ getDefinitionEdit _user = do
 
   case mDefinition of
     (Just definition) -> do
-      setResponseHeader "HX-Trigger-After-Settle" "showDefinitionsModal"
-      serveHtml $ definitionsModal $ Just definition
+      setHeader "HX-Trigger-After-Settle" "showDefinitionsModal"
+      renderHtml $ definitionsModal $ Just definition
     _ -> errorToast "There was an issue fetching the definition.  Please try again."
 
 postDefinitionEdit ::
-  ( MonadWebServer m
-  , MonadDefinition m
+  ( DefinitionStore :> es
+  , IOE :> es
   ) =>
   User ->
-  m ()
+  ActionT (Eff es) ()
 postDefinitionEdit user = do
-  definitionId <- fromForm "id"
-  definitionDescription <- fromForm "description"
-  definitionAmount <- fromForm "amount"
-  definitionFrequency <- fromForm "frequency"
-  definitionIsAutomaticWithdrawal <- fmap (== ("on" :: Text)) <$> fromForm "is-automatic-withdrawal"
-  definitionStartDate <- fmap unMyDay <$> fromForm "start-date"
-  definitionEndDate <- fmap unMyDay <$> fromForm "end-date"
-  let mDefinition =
+  definitionId <- formParam "id"
+  definitionDescription <- formParam "description"
+  definitionAmount <- formParam "amount"
+  definitionFrequency <- formParam "frequency"
+  definitionIsAutomaticWithdrawal <- toggleFormParam "is-automatic-withdrawal"
+  definitionStartDate <- unMyDay <$> formParam "start-date"
+  definitionEndDate <- fmap unMyDay <$> optionalFormParam "end-date"
+  let definition =
         Definition
-          <$> definitionId
-          <*> definitionDescription
-          <*> definitionAmount
-          <*> definitionFrequency
-          <*> definitionStartDate
-          <*> pure definitionEndDate
-          <*> definitionIsAutomaticWithdrawal
+          definitionId
+          definitionDescription
+          definitionAmount
+          definitionFrequency
+          definitionStartDate
+          definitionEndDate
+          definitionIsAutomaticWithdrawal
 
-  case mDefinition of
-    Just def -> do
-      Effect.Definition.save user.email def
-      setResponseHeader "HX-Trigger" "hideDefinitionsModal, reload"
-    Nothing -> errorToast "There was an issue saving the definition. Please try again."
+  lift $ Effect.DefinitionStore.save user.email definition
+  setHeader "HX-Trigger" "hideDefinitionsModal, reload"

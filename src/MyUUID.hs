@@ -1,13 +1,14 @@
 module MyUUID where
 
 import Data.Aeson (FromJSON, ToJSON)
+import Data.Text (Text)
 import Data.UUID qualified as UUID
 import Data.UUID.V4 qualified as UUID4
 import Database.SQLite.Simple
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.Ok
 import Database.SQLite.Simple.ToField
-import Relude
+import Effectful
 
 newtype MyUUID = MyUUID {toUUID :: UUID.UUID}
   deriving (Show, Eq, FromJSON, ToJSON)

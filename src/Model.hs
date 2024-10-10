@@ -1,7 +1,7 @@
 module Model where
 
 import Data.Aeson (Encoding, FromJSON, ToJSON (toEncoding), defaultOptions, fieldLabelModifier, genericToEncoding)
-import Data.Text (toLower)
+import Data.Text (Text, pack, toLower)
 import Data.Text.Lazy qualified as LT
 import Data.Time (Day, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
@@ -10,9 +10,9 @@ import Database.SQLite.Simple.FromField (FieldParser, FromField (..), ResultErro
 import Database.SQLite.Simple.FromRow (FromRow (..))
 import Database.SQLite.Simple.Ok (Ok (..))
 import Database.SQLite.Simple.ToField (ToField (..))
+import GHC.Generics (Generic)
 import Id
 import MyUUID
-import Relude
 import Text.Read
 import Web.Scotty (Parsable (..))
 
@@ -23,7 +23,7 @@ newtype Password a = Password {unPassword :: Text}
   deriving (Show, Eq)
 
 instance Read (Password PlainText) where
-  readsPrec _ input = [(Password (Relude.toText input), "")]
+  readsPrec _ input = [(Password (pack input), "")]
 
 instance ToField (Password Hashed) where
   toField :: Password Hashed -> SQLData
@@ -40,7 +40,7 @@ newtype Token a = Token {unToken :: Text}
   deriving (Show, Eq)
 
 instance Read (Token PlainText) where
-  readsPrec _ input = [(Token (Relude.toText input), "")]
+  readsPrec _ input = [(Token (pack input), "")]
 
 instance ToField (Token Hashed) where
   toField :: Token Hashed -> SQLData
@@ -62,10 +62,10 @@ instance Parsable (Password PlainText) where
   parseParam = pure . Password . LT.toStrict
 
 newtype Email = Email {unEmail :: Text}
-  deriving (Show, FromField, Parsable)
+  deriving (Show, Eq, Ord, FromField, Parsable)
 
 instance Read Email where
-  readsPrec _ input = [(Email (Relude.toText input), "")]
+  readsPrec _ input = [(Email (pack input), "")]
 
 instance ToField Email where
   toField :: Email -> SQLData

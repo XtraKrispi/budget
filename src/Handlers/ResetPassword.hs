@@ -1,21 +1,23 @@
 module Handlers.ResetPassword where
 
+import Control.Monad.Trans (lift)
 import Data.Time (
   addUTCTime,
   secondsToNominalDiffTime,
  )
-import Effects.Config
+import Effectful
+import Effectful.Reader.Static (Reader, asks)
+import Effects.HashPassword
 import Effects.Mail
-import Effects.Password
-import Effects.ResetPassword
-import Effects.Time (MonadTime)
+import Effects.ResetPasswordStore
+import Effects.Time (Time)
 import Effects.Time qualified
-import Effects.User
-import Effects.WebServer
+import Effects.UserStore
 import Environment (
   BaseUrl (BaseUrl),
+  Environment (envBaseUrl),
  )
-import Handlers.Global (errorToast, unknownErrorToast)
+import Handlers.Global (errorToast)
 import Html.Common (addToast)
 import Html.ResetPassword qualified as ResetPassword
 import Lucid (button_, class_, disabled_, id_, span_, type_)
@@ -28,110 +30,94 @@ import Model (
   User (..),
  )
 import Network.URI.Encode (encodeText)
-import Relude
 import ResetPassword qualified
+import Web.Scotty.ActionT (renderHtml)
+import Web.Scotty.Trans (ActionT, captureParam, formParam, setHeader)
 
-getResetPassword :: (MonadWebServer m) => m ()
-getResetPassword = serveHtml ResetPassword.landingPage
+getResetPassword :: (IOE :> es) => ActionT (Eff es) ()
+getResetPassword = renderHtml ResetPassword.landingPage
 
 postResetPassword ::
-  ( MonadWebServer m
-  , MonadResetPassword m
-  , MonadTime m
-  , MonadMail m
-  , MonadConfig m
+  ( ResetPasswordStore :> es
+  , Time :> es
+  , Mail :> es
+  , Reader Environment :> es
+  , IOE :> es
   ) =>
-  m ()
+  ActionT (Eff es) ()
 postResetPassword = do
-  mEmail <- fromForm "email"
-  case mEmail of
-    Just email -> do
-      (Token clearTextToken, hashedToken) <- Effects.ResetPassword.generateToken
-      BaseUrl base <- getBaseUrl
-      let url = base <> "/reset-password/" <> encodeText clearTextToken
-      expiry <- ExpirationTime . addUTCTime (secondsToNominalDiffTime (10 * 60)) <$> Effects.Time.now
-      Effects.ResetPassword.insertToken email expiry hashedToken
-      sendMail email (Subject "Budget - Reset Password") (ResetPassword.resetPasswordEmail url)
-      setResponseHeader "HX-Reswap" "none"
-      serveHtml $ addToast Success (span_ "If you have an account with Budget, please check your email for a password reset link.")
-    Nothing -> errorToast "An unknown error has occurred. Please try again."
+  email <- formParam "email"
+  (Token clearTextToken, hashedToken) <- lift Effects.ResetPasswordStore.generateToken
+  BaseUrl base <- lift $ asks envBaseUrl
+  let url = base <> "/reset-password/" <> encodeText clearTextToken
+  expiry <- lift $ ExpirationTime . addUTCTime (secondsToNominalDiffTime (10 * 60)) <$> Effects.Time.now
+  lift $ Effects.ResetPasswordStore.insertToken email expiry hashedToken
+  lift $ sendMail email (Subject "Budget - Reset Password") (ResetPassword.resetPasswordEmail url)
+  setHeader "HX-Reswap" "none"
+  renderHtml $ addToast Success (span_ "If you have an account with Budget, please check your email for a password reset link.")
 
 getResetPasswordToken ::
-  ( MonadUser m
-  , MonadWebServer m
-  , MonadTime m
-  , MonadResetPassword m
+  ( Time :> es
+  , ResetPasswordStore :> es
+  , IOE :> es
   ) =>
-  m ()
+  ActionT (Eff es) ()
 getResetPasswordToken = do
-  mToken <- fromUrl "token"
-  case mToken of
-    Just token -> do
-      now <- Effects.Time.now
-      mUser <- ResetPassword.getUser token now <$> Effects.ResetPassword.getUsers
-      case mUser of
-        Just _user ->
-          serveHtml $ ResetPassword.tokenPage token
-        _ -> serveHtml ResetPassword.errorPage
-    Nothing -> unknownErrorToast
+  token <- captureParam "token"
+  now <- lift Effects.Time.now
+  mUser <- lift $ ResetPassword.getUser token now <$> Effects.ResetPasswordStore.getUsers
+  case mUser of
+    Just _user ->
+      renderHtml $ ResetPassword.tokenPage token
+    _ -> renderHtml ResetPassword.errorPage
 
-postResetPasswordValidate :: (MonadWebServer m) => m ()
+postResetPasswordValidate :: (IOE :> es) => ActionT (Eff es) ()
 postResetPasswordValidate = do
-  formData <- runMaybeT $ do
-    password :: Password PlainText <- MaybeT $ fromForm "password"
-    passwordConfirmation <- MaybeT $ fromForm "password-confirmation"
-    pure (password, passwordConfirmation)
-  case formData of
-    Nothing -> unknownErrorToast
-    Just (password, passwordConfirmation) ->
-      if password /= passwordConfirmation
-        then serveHtml $ do
-          ResetPassword.passwordConfirmationError True True
-          button_
-            [ class_ "btn btn-primary"
-            , type_ "submit"
-            , id_ "change-password"
-            , disabled_ "disabled"
-            ]
-            "Reset Password"
-        else do
-          serveHtml $ do
-            ResetPassword.passwordConfirmationError True False
-            button_
-              [ class_ "btn btn-primary"
-              , type_ "submit"
-              , id_ "change-password"
-              ]
-              "Reset Password"
+  password :: Password PlainText <- formParam "password"
+  passwordConfirmation <- formParam "password-confirmation"
+  if password /= passwordConfirmation
+    then renderHtml $ do
+      ResetPassword.passwordConfirmationError True True
+      button_
+        [ class_ "btn btn-primary"
+        , type_ "submit"
+        , id_ "change-password"
+        , disabled_ "disabled"
+        ]
+        "Reset Password"
+    else do
+      renderHtml $ do
+        ResetPassword.passwordConfirmationError True False
+        button_
+          [ class_ "btn btn-primary"
+          , type_ "submit"
+          , id_ "change-password"
+          ]
+          "Reset Password"
 
 postResetPasswordToken ::
-  ( MonadWebServer m
-  , MonadResetPassword m
-  , MonadUser m
-  , MonadTime m
-  , MonadPassword m
+  ( ResetPasswordStore :> es
+  , UserStore :> es
+  , Time :> es
+  , HashPassword :> es
+  , IOE :> es
   ) =>
-  m ()
+  ActionT (Eff es) ()
 postResetPasswordToken = do
-  formData <- runMaybeT $ do
-    token <- MaybeT $ fromUrl "token"
-    password :: Password PlainText <- MaybeT $ fromForm "password"
-    passwordConfirmation <- MaybeT $ fromForm "password-confirmation"
-    pure (token, password, passwordConfirmation)
-  case formData of
-    Just (token, password, passwordConfirmation) -> do
-      now <- Effects.Time.now
-      mUser <- ResetPassword.getUser token now <$> Effects.ResetPassword.getUsers
-      let errorResponse = errorToast "Something went wrong, please try again."
-      case mUser of
-        (Just user) ->
-          if password == passwordConfirmation
-            then do
-              hashed <- Effects.Password.hashPassword password
-              Effects.User.updatePassword user.email hashed
-              Effects.ResetPassword.removeUserTokens user.email
-              setResponseHeader "HX-Redirect" "/login"
-              serveHtml $ addToast Success (span_ "You have successfully reset your password, you may now log in.")
-            else errorResponse
-        _ -> errorResponse
-    Nothing -> unknownErrorToast
+  token <- formParam "token"
+  password :: Password PlainText <- formParam "password"
+  passwordConfirmation <- formParam "password-confirmation"
+  now <- lift Effects.Time.now
+  mUser <- lift $ ResetPassword.getUser token now <$> Effects.ResetPasswordStore.getUsers
+  let errorResponse = errorToast "Something went wrong, please try again."
+  case mUser of
+    (Just user) ->
+      if password == passwordConfirmation
+        then do
+          hashed <- lift $ Effects.HashPassword.hashPassword password
+          lift $ Effects.UserStore.updatePassword user.email hashed
+          lift $ Effects.ResetPasswordStore.removeUserTokens user.email
+          setHeader "HX-Redirect" "/login"
+          renderHtml $ addToast Success (span_ "You have successfully reset your password, you may now log in.")
+        else errorResponse
+    _ -> errorResponse

@@ -1,9 +1,10 @@
 module Html.Common (withPageShell, withLayout, addToast, classList) where
 
+import Data.Text (Text)
+import Data.Text qualified as T
 import Htmx.Attributes
 import Lucid
 import Model (AlertType (..), User)
-import Relude
 import Svg (d_, fill_, path_, strokeLinecap_, strokeLinejoin_, strokeWidth_, stroke_, viewBox_)
 
 withPageShell :: Html () -> Html ()
@@ -115,4 +116,4 @@ addToast alertType content = do
 
 classList :: [(Text, Bool)] -> Attributes
 classList cs =
-  class_ $ unwords (fst <$> filter snd cs)
+  class_ $ T.unwords (fst <$> filter snd cs)

@@ -2,8 +2,9 @@ module Db where
 
 import AppError (AppError)
 import Control.Monad.Error.Class (MonadError)
+import Control.Monad.IO.Class (MonadIO)
+import Control.Monad.Reader (MonadReader)
 import Environment (HasAppEnvironment, HasDbPath)
-import Relude (MonadIO, MonadReader)
 
 type WithDb env m =
   ( HasAppEnvironment env

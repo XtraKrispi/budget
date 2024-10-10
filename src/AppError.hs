@@ -1,6 +1,7 @@
 module AppError where
 
-import Relude
+import Control.Exception
+import Data.Text
 
 data AppError
   = DatabaseError Text

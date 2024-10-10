@@ -3,15 +3,17 @@
 module Db.Archive where
 
 import Database.SQLite.Simple (Only (..), execute, query)
-import Db
 import Db.Internal
+import Effectful (Eff, IOE, (:>))
+import Effectful.Reader.Static (Reader)
+import Environment
 import Model
-import Text.RawString.QQ
+import Text.RawString.QQ (r)
 
 getAllArchive ::
-  (WithDb env m) =>
+  (IOE :> es, Reader Environment :> es) =>
   Email ->
-  m [ArchivedItem]
+  Eff es [ArchivedItem]
 getAllArchive email = runDb \conn ->
   query
     conn
@@ -29,10 +31,10 @@ getAllArchive email = runDb \conn ->
     (Only email)
 
 insertArchive ::
-  (WithDb env m) =>
+  (IOE :> es, Reader Environment :> es) =>
   Email ->
   ArchivedItem ->
-  m ()
+  Eff es ()
 insertArchive email archive = runDb \conn ->
   execute
     conn

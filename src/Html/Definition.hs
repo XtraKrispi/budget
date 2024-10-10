@@ -2,7 +2,8 @@
 
 module Html.Definition where
 
-import Data.Text (pack)
+import Data.Foldable (traverse_)
+import Data.Text (Text, pack)
 import Data.Text.Format.Numbers
 import Data.Time.Format.ISO8601 (ISO8601 (..), formatShow)
 import Html.Common (withLayout)
@@ -11,7 +12,6 @@ import Htmx.Attributes (hxGet, hxPost, hxSwap, hxTarget, hxTrigger, hyper_)
 import Id
 import Lucid
 import Model (Definition (..), Frequency (..), User)
-import Relude
 import Svg (d_, fill_, path_, strokeLinecap_, strokeLinejoin_, strokeWidth_, stroke_, viewBox_)
 import Text.RawString.QQ
 

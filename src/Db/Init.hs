@@ -1,16 +1,15 @@
-{-# LANGUAGE QuasiQuotes #-}
-{-# LANGUAGE RecordWildCards #-}
-
 module Db.Init where
 
+import Data.Foldable (traverse_)
 import Database.SQLite.Simple (execute_)
-import Db
 import Db.Internal
-import Relude
+import Effectful
+import Effectful.Reader.Static (Reader)
+import Environment
 
 initialize ::
-  (WithDb env m) =>
-  m ()
+  (IOE :> es, Reader Environment :> es) =>
+  Eff es ()
 initialize =
   runDb \conn -> do
     let statements =

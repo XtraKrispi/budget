@@ -1,7 +1,7 @@
 module Effects.Config where
 
+import Control.Monad.Trans (MonadTrans, lift)
 import Environment (BaseUrl)
-import Relude
 
 class (Monad m) => MonadConfig m where
   getBaseUrl :: m BaseUrl

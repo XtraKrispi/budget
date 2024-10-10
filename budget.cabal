@@ -32,20 +32,20 @@ executable budget
       Db.Scratch
       Db.Session
       Db.User
-      Effects.Archive
+      Effects.ArchiveStore
       Effects.Auth
       Effects.Config
-      Effects.Definition
-      Effects.Id
+      Effects.Database
+      Effects.DefinitionStore
+      Effects.HashPassword
       Effects.Mail
-      Effects.MyUUID
-      Effects.Password
-      Effects.ResetPassword
-      Effects.Scratch
-      Effects.Session
+      Effects.MakeId
+      Effects.MakeMyUUID
+      Effects.ResetPasswordStore
+      Effects.ScratchStore
+      Effects.SessionStore
       Effects.Time
-      Effects.User
-      Effects.WebServer
+      Effects.UserStore
       Environment
       Handlers
       Handlers.Archive
@@ -66,6 +66,17 @@ executable budget
       Htmx.Attributes
       Htmx.Request
       Id
+      Interpreters.ArchiveStore
+      Interpreters.DefinitionStore
+      Interpreters.HashPassword
+      Interpreters.Mail
+      Interpreters.MakeId
+      Interpreters.MakeMyUUID
+      Interpreters.ResetPasswordStore
+      Interpreters.ScratchStore
+      Interpreters.SessionStore
+      Interpreters.Time
+      Interpreters.UserStore
       Model
       MyUUID
       Password
@@ -81,13 +92,16 @@ executable budget
       OverloadedStrings
       BlockArguments
       OverloadedRecordDot
-      NoImplicitPrelude
       LambdaCase
+      GADTs
+      TypeFamilies
+      DataKinds
   ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
   build-depends:
       MonadRandom
     , aeson
     , base >=4.7 && <5
+    , containers
     , data-default
     , dotenv
     , effectful
@@ -102,11 +116,12 @@ executable budget
     , mtl
     , password
     , raw-strings-qq
-    , relude
     , scotty
     , smtp-mail
     , sqlite-simple
+    , text
     , time
+    , transformers
     , unliftio-core
     , uri-encode
     , uuid

@@ -1,13 +1,15 @@
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module Effects.Time where
 
-import Data.Time (Day, UTCTime (utctDay))
-import Relude
+import Data.Time (Day, UTCTime)
+import Effectful
+import Effectful.TH (makeEffect)
 
-class (Monad m) => MonadTime m where
-  now :: m UTCTime
-  today :: m Day
-  today = utctDay <$> now
+data Time :: Effect where
+  Now :: Time m UTCTime
+  Today :: Time m Day
 
-instance (MonadTrans outer, MonadTime inner) => MonadTime (outer inner) where
-  now = lift now
-  today = lift today
+makeEffect ''Time

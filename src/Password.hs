@@ -1,8 +1,8 @@
 module Password where
 
+import Control.Monad.IO.Class (MonadIO)
 import Data.Password.Argon2 qualified as Argon2
 import Model (Hashed, Password (Password), PlainText)
-import Relude
 
 hashPassword :: (MonadIO m) => Password PlainText -> m (Password Hashed)
 hashPassword (Password password) =

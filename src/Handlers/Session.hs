@@ -1,24 +1,27 @@
 module Handlers.Session where
 
-import Effects.Auth
-import Effects.Session (MonadSession (logout))
-import Effects.WebServer
+import Auth qualified
+import Control.Monad.Trans (lift)
+import Effectful
+import Effectful.Reader.Static (Reader)
+import Effects.SessionStore
+import Environment (Environment)
 import Model (User)
-import Relude
+import Web.Scotty.Trans (ActionT, setHeader)
 
 deleteSession ::
-  ( MonadSession m
-  , MonadWebServer m
-  , MonadAuth m
+  ( SessionStore :> es
+  , Reader Environment :> es
+  , IOE :> es
   ) =>
   User ->
-  m ()
+  ActionT (Eff es) ()
 deleteSession _ = do
-  mSessionId <- getAuthCookie
+  mSessionId <- Auth.getAuthCookie
   case mSessionId of
     Just sessionId -> do
-      Effects.Session.logout sessionId
-      invalidateAuthCookie
+      lift $ Effects.SessionStore.logout sessionId
+      Auth.invalidateAuthCookie
     Nothing -> pure ()
 
-  setResponseHeader "HX-Redirect" "/"
+  setHeader "HX-Redirect" "/"

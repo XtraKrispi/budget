@@ -1,64 +1,61 @@
 module Handlers.Archive where
 
-import Effects.Archive
-import Effects.MyUUID (MonadMyUUID (generate))
-import Effects.Time (MonadTime (..))
-import Effects.WebServer (MonadWebServer (..))
-import Handlers.Global (errorToast)
+import Control.Monad.Trans (lift)
+import Effectful
+import Effects.ArchiveStore
+import Effects.MakeMyUUID
+import Effects.Time
 import Html.Archive qualified as Archive
 import Htmx.Request (isBoosted, isHtmx)
 import Id
 import Model (ArchiveAction, ArchivedItem (..), MyDay (unMyDay), User (email))
-import Relude
+import Web.Scotty.ActionT (renderHtml)
+import Web.Scotty.Trans (ActionT, formParam, setHeader)
 
 getArchive ::
-  ( MonadArchive m
-  , MonadWebServer m
+  ( ArchiveStore :> es
+  , IOE :> es
   ) =>
   User ->
-  m ()
+  ActionT (Eff es) ()
 getArchive user = do
   htmx <- isHtmx
   boosted <- isBoosted
   if htmx && not boosted
     then do
-      items <- Effects.Archive.getAll user.email
-      serveHtml $ Archive.items items
+      items <- lift $ getAll user.email
+      renderHtml $ Archive.items items
     else do
-      serveHtml $ Archive.archivePage user
+      renderHtml $ Archive.archivePage user
 
 postArchiveAction ::
-  ( MonadIO m
-  , MonadMyUUID m
-  , MonadTime m
-  , MonadArchive m
-  , MonadWebServer m
+  ( MakeMyUUID :> es
+  , Time :> es
+  , ArchiveStore :> es
+  , IOE :> es
   ) =>
   ArchiveAction ->
   User ->
-  m ()
+  ActionT (Eff es) ()
 postArchiveAction archivedItemAction user = do
-  mArchivedItemAmount <- fromForm "itemAmount"
-  mArchivedItemDate <- fmap unMyDay <$> fromForm "itemDate"
-  mArchivedItemItemDefinitionId <- fromForm "itemDefinitionId"
-  mArchivedItemDescription <- fromForm "itemDescription"
+  archivedItemAmount <- formParam "itemAmount"
+  archivedItemDate <- unMyDay <$> formParam "itemDate"
+  archivedItemItemDefinitionId <- formParam "itemDefinitionId"
+  archivedItemDescription <- formParam "itemDescription"
 
-  archivedItemId <- Id <$> generate
-  archivedItemActionDate <- today
+  archivedItemId <- lift $ Id <$> generate
+  archivedItemActionDate <- lift today
 
   let item =
-        ArchivedItem archivedItemId
-          <$> mArchivedItemItemDefinitionId
-          <*> mArchivedItemDescription
-          <*> mArchivedItemAmount
-          <*> mArchivedItemDate
-          <*> pure archivedItemActionDate
-          <*> pure archivedItemAction
+        ArchivedItem
+          archivedItemId
+          archivedItemItemDefinitionId
+          archivedItemDescription
+          archivedItemAmount
+          archivedItemDate
+          archivedItemActionDate
+          archivedItemAction
 
-  case item of
-    Just i -> do
-      insertArchive user.email i
+  lift $ insert user.email item
 
-      setResponseHeader "HX-Trigger" "reload"
-    Nothing ->
-      errorToast "There was an issue with the request, please try again."
+  setHeader "HX-Trigger" "reload"

@@ -1,7 +1,8 @@
 module Environment where
 
-import Relude
-
+import Data.Maybe (fromMaybe)
+import Data.Text
+import GHC.Generics
 import System.Envy
 
 defaultEnvOptions :: Option

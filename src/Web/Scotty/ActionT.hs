@@ -1,10 +1,13 @@
 module Web.Scotty.ActionT where
 
-import Relude
-
+import Control.Monad.IO.Class (MonadIO)
+import Data.Foldable (find)
+import Data.Text (Text)
 import Data.Text.Lazy qualified as LT
+import Htmx.Request qualified as Htmx
+import Lucid (Html, renderText)
 import Web.Scotty.Internal.Types (ActionT)
-import Web.Scotty.Trans (Parsable (parseParam), captureParams, formParams)
+import Web.Scotty.Trans (Parsable (parseParam), captureParams, formParams, html, redirect, setHeader)
 
 captureParamMaybe :: (Monad m, Parsable a) => LT.Text -> ActionT m (Maybe a)
 captureParamMaybe param = do
@@ -34,3 +37,15 @@ optionalFormParam param = do
       Right parsed -> pure (Just parsed)
       Left _ -> pure Nothing
     _ -> pure Nothing
+
+redirectTo :: (MonadIO m) => Text -> ActionT m ()
+redirectTo url = do
+  htmx <- Htmx.isHtmx
+  if htmx
+    then
+      setHeader "HX-Location" (LT.fromStrict url)
+    else
+      redirect (LT.fromStrict url)
+
+renderHtml :: (MonadIO m) => Html a -> ActionT m ()
+renderHtml = html . renderText

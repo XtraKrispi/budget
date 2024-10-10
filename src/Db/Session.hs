@@ -4,14 +4,15 @@ module Db.Session where
 
 import Data.Time (UTCTime)
 import Database.SQLite.Simple (Only (..), execute, query)
-import Db
 import Db.Internal
+import Effectful
+import Effectful.Reader.Static (Reader)
+import Environment
 import Model
 import MyUUID qualified
-import Relude
 import Text.RawString.QQ
 
-createSession :: (WithDb env m) => Email -> UTCTime -> m SessionId
+createSession :: (IOE :> es, Reader Environment :> es) => Email -> UTCTime -> Eff es SessionId
 createSession email expiry = do
   sessionId <- SessionId <$> liftIO MyUUID.nextRandom
   runDb \conn ->
@@ -24,7 +25,7 @@ createSession email expiry = do
       (sessionId, expiry, email)
   pure sessionId
 
-getUserForSession :: (WithDb env m) => SessionId -> m (Maybe (User, UTCTime))
+getUserForSession :: (IOE :> es, Reader Environment :> es) => SessionId -> Eff es (Maybe (User, UTCTime))
 getUserForSession sessionId = do
   results <- runDb \conn -> do
     query
@@ -43,7 +44,7 @@ getUserForSession sessionId = do
     [(email, name, passwordHash, expirationTime)] -> pure $ Just (User email name passwordHash, expirationTime)
     _ -> pure Nothing
 
-updateSession :: (WithDb env m) => SessionId -> UTCTime -> m ()
+updateSession :: (IOE :> es, Reader Environment :> es) => SessionId -> UTCTime -> Eff es ()
 updateSession sessionId expiration =
   runDb \conn ->
     execute
@@ -54,7 +55,7 @@ updateSession sessionId expiration =
       |]
       (expiration, sessionId)
 
-deleteSession :: (WithDb env m) => SessionId -> m ()
+deleteSession :: (IOE :> es, Reader Environment :> es) => SessionId -> Eff es ()
 deleteSession sessionId =
   runDb \conn ->
     execute conn "DELETE FROM sessions WHERE session_id = ?;" (Only sessionId)
