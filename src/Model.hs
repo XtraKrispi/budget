@@ -78,7 +78,7 @@ data AlertType
   deriving (Eq)
 
 newtype SessionId = SessionId {unSessionId :: MyUUID}
-  deriving (Show, Eq, ToField, FromField)
+  deriving (Show, Eq, Ord, ToField, FromField)
 
 data Frequency
   = OneTime

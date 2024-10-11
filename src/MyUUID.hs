@@ -11,7 +11,7 @@ import Database.SQLite.Simple.ToField
 import Effectful
 
 newtype MyUUID = MyUUID {toUUID :: UUID.UUID}
-  deriving (Show, Eq, FromJSON, ToJSON)
+  deriving (Show, Eq, Ord, FromJSON, ToJSON)
 
 instance ToField MyUUID where
   toField :: MyUUID -> SQLData

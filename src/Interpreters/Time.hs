@@ -9,3 +9,8 @@ runTimeIO :: (IOE :> es) => Eff (Time : es) a -> Eff es a
 runTimeIO = interpret \_ -> \case
   Now -> liftIO getCurrentTime
   Today -> liftIO $ utctDay <$> getCurrentTime
+
+runTimePure :: UTCTime -> Eff (Time : es) a -> Eff es a
+runTimePure timeToUse = interpret \_ -> \case
+  Now -> pure timeToUse
+  Today -> pure $ utctDay timeToUse

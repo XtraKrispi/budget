@@ -29,3 +29,7 @@ runMailIO = interpret \_ -> \case
             subject
             [htmlPart (renderText body)]
     adapt MailError $ sendMailWithLoginTLS smtpConfig.smtpHostname smtpConfig.smtpUsername smtpConfig.smtpPassword mail
+
+runMailPure :: Eff (Mail : es) a -> Eff es a
+runMailPure = interpret \_ -> \case
+  SendMail{} -> pure ()
