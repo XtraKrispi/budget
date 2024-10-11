@@ -33,9 +33,6 @@ executable budget
       Db.Session
       Db.User
       Effects.ArchiveStore
-      Effects.Auth
-      Effects.Config
-      Effects.Database
       Effects.DefinitionStore
       Effects.HashPassword
       Effects.Mail
