@@ -67,6 +67,7 @@ executable budget
       Interpreters.ArchiveStore
       Interpreters.DefinitionStore
       Interpreters.HashPassword
+      Interpreters.Helpers
       Interpreters.Mail
       Interpreters.MakeId
       Interpreters.MakeMyUUID
@@ -103,8 +104,10 @@ executable budget
     , data-default
     , dotenv
     , effectful
+    , effectful-core
     , effectful-th
     , envy
+    , exceptions
     , format-numbers
     , http-types
     , lens

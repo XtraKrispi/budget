@@ -1,14 +1,19 @@
 module Db.Init where
 
+import AppError (AppError)
 import Data.Foldable (traverse_)
 import Database.SQLite.Simple (execute_)
 import Db.Internal
 import Effectful
+import Effectful.Error.Static (Error)
 import Effectful.Reader.Static (Reader)
 import Environment
 
 initialize ::
-  (IOE :> es, Reader Environment :> es) =>
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
   Eff es ()
 initialize =
   runDb \conn -> do

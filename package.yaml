@@ -30,8 +30,10 @@ dependencies:
   - data-default
   - dotenv
   - effectful
+  - effectful-core
   - effectful-th
   - envy
+  - exceptions
   - format-numbers
   - http-types
   - lens

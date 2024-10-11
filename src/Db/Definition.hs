@@ -3,17 +3,25 @@
 
 module Db.Definition where
 
+import AppError (AppError)
 import Data.Maybe (listToMaybe)
 import Database.SQLite.Simple (Only (..), execute, query)
 import Db.Internal
 import Effectful
+import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
 import Id
 import Model
 import Text.RawString.QQ
 
-getAllDefinitions :: (IOE :> es, Reader Environment :> es) => Email -> Eff es [Definition]
+getAllDefinitions ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  Eff es [Definition]
 getAllDefinitions email = runDb \conn ->
   query
     conn
@@ -31,7 +39,10 @@ getAllDefinitions email = runDb \conn ->
     (Only email)
 
 getDefinitionById ::
-  (IOE :> es, Reader Environment :> es) =>
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
   Email ->
   Id Definition ->
   Eff es (Maybe Definition)
@@ -52,7 +63,13 @@ getDefinitionById email defId = runDb \conn -> do
       (defId, email)
 
 upsertDefinition ::
-  (IOE :> es, Reader Environment :> es) => Email -> Definition -> Eff es ()
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  Definition ->
+  Eff es ()
 upsertDefinition email (Definition{..}) = do
   mDef <- getDefinitionById email definitionId
   let sql = case mDef of

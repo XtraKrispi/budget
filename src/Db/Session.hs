@@ -2,17 +2,26 @@
 
 module Db.Session where
 
+import AppError
 import Data.Time (UTCTime)
 import Database.SQLite.Simple (Only (..), execute, query)
 import Db.Internal
 import Effectful
+import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
 import Model
 import MyUUID qualified
 import Text.RawString.QQ
 
-createSession :: (IOE :> es, Reader Environment :> es) => Email -> UTCTime -> Eff es SessionId
+createSession ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  UTCTime ->
+  Eff es SessionId
 createSession email expiry = do
   sessionId <- SessionId <$> liftIO MyUUID.nextRandom
   runDb \conn ->
@@ -25,7 +34,13 @@ createSession email expiry = do
       (sessionId, expiry, email)
   pure sessionId
 
-getUserForSession :: (IOE :> es, Reader Environment :> es) => SessionId -> Eff es (Maybe (User, UTCTime))
+getUserForSession ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  SessionId ->
+  Eff es (Maybe (User, UTCTime))
 getUserForSession sessionId = do
   results <- runDb \conn -> do
     query
@@ -44,7 +59,14 @@ getUserForSession sessionId = do
     [(email, name, passwordHash, expirationTime)] -> pure $ Just (User email name passwordHash, expirationTime)
     _ -> pure Nothing
 
-updateSession :: (IOE :> es, Reader Environment :> es) => SessionId -> UTCTime -> Eff es ()
+updateSession ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  SessionId ->
+  UTCTime ->
+  Eff es ()
 updateSession sessionId expiration =
   runDb \conn ->
     execute
@@ -55,7 +77,13 @@ updateSession sessionId expiration =
       |]
       (expiration, sessionId)
 
-deleteSession :: (IOE :> es, Reader Environment :> es) => SessionId -> Eff es ()
+deleteSession ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  SessionId ->
+  Eff es ()
 deleteSession sessionId =
   runDb \conn ->
     execute conn "DELETE FROM sessions WHERE session_id = ?;" (Only sessionId)

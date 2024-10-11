@@ -2,16 +2,21 @@
 
 module Db.Archive where
 
+import AppError (AppError)
 import Database.SQLite.Simple (Only (..), execute, query)
 import Db.Internal
 import Effectful (Eff, IOE, (:>))
+import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
 import Model
 import Text.RawString.QQ (r)
 
 getAllArchive ::
-  (IOE :> es, Reader Environment :> es) =>
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
   Email ->
   Eff es [ArchivedItem]
 getAllArchive email = runDb \conn ->
@@ -31,7 +36,10 @@ getAllArchive email = runDb \conn ->
     (Only email)
 
 insertArchive ::
-  (IOE :> es, Reader Environment :> es) =>
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
   Email ->
   ArchivedItem ->
   Eff es ()

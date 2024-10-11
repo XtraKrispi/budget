@@ -2,16 +2,18 @@
 
 module Db.Scratch where
 
+import AppError
 import Data.Maybe (listToMaybe)
 import Database.SQLite.Simple (Only (..), execute, query)
 import Db.Internal
 import Effectful
+import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
 import Model
 import Text.RawString.QQ
 
-getScratch :: (IOE :> es, Reader Environment :> es) => Email -> Eff es (Maybe Scratch)
+getScratch :: (IOE :> es, Reader Environment :> es, Error AppError :> es) => Email -> Eff es (Maybe Scratch)
 getScratch email = runDb \conn -> do
   listToMaybe
     <$> query
@@ -23,7 +25,14 @@ getScratch email = runDb \conn -> do
     |]
       (Only email)
 
-saveUserScratch :: (IOE :> es, Reader Environment :> es) => Email -> Scratch -> Eff es ()
+saveUserScratch ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  Scratch ->
+  Eff es ()
 saveUserScratch email scratch = runDb \conn ->
   execute
     conn

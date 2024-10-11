@@ -3,19 +3,27 @@
 
 module Interpreters.DefinitionStore where
 
+import AppError (AppError)
 import Data.Foldable (find)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Db.Definition qualified
 import Effectful
 import Effectful.Dispatch.Dynamic (interpret, reinterpret)
+import Effectful.Error.Static (Error)
 import Effectful.Reader.Static (Reader)
 import Effectful.State.Static.Local (evalState, gets, modify)
 import Effects.DefinitionStore
 import Environment
 import Model
 
-runDefinitionStoreSqlite :: (IOE :> es, Reader Environment :> es) => Eff (DefinitionStore : es) a -> Eff es a
+runDefinitionStoreSqlite ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Eff (DefinitionStore : es) a ->
+  Eff es a
 runDefinitionStoreSqlite = interpret \_ -> \case
   GetAll email -> Db.Definition.getAllDefinitions email
   Get email definitionId -> Db.Definition.getDefinitionById email definitionId

@@ -2,26 +2,48 @@
 
 module Db.User where
 
+import AppError (AppError)
 import Data.Maybe (listToMaybe)
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Database.SQLite.Simple (Only (..), execute, query, query_)
 import Db.Internal
 import Effectful
+import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
 import Model
 import Text.RawString.QQ
 
-getUserByEmail :: (IOE :> es, Reader Environment :> es) => Email -> Eff es (Maybe User)
+getUserByEmail ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  Eff es (Maybe User)
 getUserByEmail email = do
   runDb $ \conn -> listToMaybe <$> query conn "SELECT email, name, password_hash FROM users WHERE email = ?" (Only email)
 
-insertUser :: (IOE :> es, Reader Environment :> es) => User -> Eff es ()
+insertUser ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  User ->
+  Eff es ()
 insertUser user =
   runDb $ \conn -> execute conn "INSERT INTO users(email, name, password_hash) VALUES(?, ?, ?)" (user.email, user.name, unPassword user.passwordHash)
 
-insertResetToken :: (IOE :> es, Reader Environment :> es) => Email -> Token Hashed -> UTCTime -> Eff es (Maybe ())
+insertResetToken ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  Token Hashed ->
+  UTCTime ->
+  Eff es (Maybe ())
 insertResetToken email token expiry = do
   results :: [Only Text] <- runDb \conn ->
     query
@@ -37,7 +59,12 @@ insertResetToken email token expiry = do
     [] -> pure Nothing
     _ -> pure $ Just ()
 
-getUsersForResetPassword :: (IOE :> es, Reader Environment :> es) => Eff es [(User, UTCTime, Token Hashed)]
+getUsersForResetPassword ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Eff es [(User, UTCTime, Token Hashed)]
 getUsersForResetPassword = do
   runDb \conn -> do
     results <-
@@ -57,7 +84,14 @@ getUsersForResetPassword = do
       )
         <$> results
 
-updateUserPassword :: (IOE :> es, Reader Environment :> es) => Email -> Password Hashed -> Eff es ()
+updateUserPassword ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  Password Hashed ->
+  Eff es ()
 updateUserPassword email password =
   runDb \conn ->
     execute
@@ -67,7 +101,13 @@ updateUserPassword email password =
           WHERE email = ?;|]
       (password, email)
 
-removeAllUserTokens :: (IOE :> es, Reader Environment :> es) => Email -> Eff es ()
+removeAllUserTokens ::
+  ( IOE :> es
+  , Reader Environment :> es
+  , Error AppError :> es
+  ) =>
+  Email ->
+  Eff es ()
 removeAllUserTokens email = runDb \conn ->
   execute
     conn

@@ -1,12 +1,15 @@
 module Db.Internal where
 
+import AppError (AppError (DatabaseError))
 import Data.Text (pack)
 import Data.Text.IO (hPutStrLn)
 import Data.Time (getCurrentTime)
 import Database.SQLite.Simple (Connection, setTrace, withConnection)
-import Effectful (Eff, IOE, MonadIO (liftIO), (:>))
+import Effectful (Eff, IOE, (:>))
+import Effectful.Error.Static (Error)
 import Effectful.Reader.Static (Reader, asks)
 import Environment
+import Interpreters.Helpers (adapt)
 import System.IO (stderr)
 
 withTraceConnection ::
@@ -24,10 +27,10 @@ withTraceConnection (DbPath dbPath') appEnv action = do
     action conn
 
 runDb ::
-  (IOE :> es, Reader Environment :> es) =>
+  (IOE :> es, Reader Environment :> es, Error AppError :> es) =>
   (Connection -> IO a) ->
   Eff es a
 runDb cmd = do
   db <- asks envDbPath
   env <- asks envAppEnvironment
-  liftIO $ withTraceConnection db env cmd
+  adapt DatabaseError $ withTraceConnection db env cmd
