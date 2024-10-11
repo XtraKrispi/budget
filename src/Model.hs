@@ -1,8 +1,7 @@
 module Model where
 
 import Data.Aeson (Encoding, FromJSON, ToJSON (toEncoding), defaultOptions, fieldLabelModifier, genericToEncoding)
-import Data.Text (Text, pack, toLower)
-import Data.Text.Lazy qualified as LT
+import Data.Text (Text, pack, toLower, unpack)
 import Data.Time (Day, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Database.SQLite.Simple (SQLData (..))
@@ -11,10 +10,10 @@ import Database.SQLite.Simple.FromRow (FromRow (..))
 import Database.SQLite.Simple.Ok (Ok (..))
 import Database.SQLite.Simple.ToField (ToField (..))
 import GHC.Generics (Generic)
+import Handlers.Model (Parse (..))
 import Id
 import MyUUID
 import Text.Read
-import Web.Scotty (Parsable (..))
 
 data PlainText
 data Hashed
@@ -25,6 +24,8 @@ newtype Password a = Password {unPassword :: Text}
 instance Read (Password PlainText) where
   readsPrec _ input = [(Password (pack input), "")]
 
+instance Parse (Password PlainText) where
+  parse = pure . Password
 instance ToField (Password Hashed) where
   toField :: Password Hashed -> SQLData
   toField = SQLText . unPassword
@@ -53,19 +54,18 @@ instance FromField (Token Hashed) where
       SQLText txt -> Ok (Token txt)
       _ -> returnError Incompatible f "Unable to convert to proper token"
 
-instance Parsable (Token PlainText) where
-  parseParam :: LT.Text -> Either LT.Text (Token PlainText)
-  parseParam = pure . Token . LT.toStrict
-
-instance Parsable (Password PlainText) where
-  parseParam :: LT.Text -> Either LT.Text (Password PlainText)
-  parseParam = pure . Password . LT.toStrict
+instance Parse (Token PlainText) where
+  parse :: Text -> Maybe (Token PlainText)
+  parse = pure . Token
 
 newtype Email = Email {unEmail :: Text}
-  deriving (Show, Eq, Ord, FromField, Parsable)
+  deriving (Show, Eq, Ord, FromField)
 
 instance Read Email where
   readsPrec _ input = [(Email (pack input), "")]
+
+instance Parse Email where
+  parse = pure . Email
 
 instance ToField Email where
   toField :: Email -> SQLData
@@ -87,7 +87,7 @@ data AlertType
   deriving (Eq)
 
 newtype SessionId = SessionId {unSessionId :: MyUUID}
-  deriving (Eq, ToField, FromField)
+  deriving (Show, Eq, ToField, FromField)
 
 data Frequency
   = OneTime
@@ -95,12 +95,9 @@ data Frequency
   | Monthly
   deriving (Eq, Enum, Bounded, Show, Read)
 
-instance Parsable Frequency where
-  parseParam :: LT.Text -> Either LT.Text Frequency
-  parseParam p =
-    case readMaybe (LT.unpack p) of
-      Just f -> Right f
-      Nothing -> Left "There was a problem parsing the frequency"
+instance Parse Frequency where
+  parse :: Text -> Maybe Frequency
+  parse = readMaybe . unpack
 
 instance FromField Frequency where
   fromField :: FieldParser Frequency
@@ -192,11 +189,8 @@ instance Read MyDay where
     Just d -> [(MyDay d, "")]
     Nothing -> []
 
-instance Parsable MyDay where
-  parseParam :: LT.Text -> Either LT.Text MyDay
-  parseParam date =
-    case iso8601ParseM (LT.unpack date) of
-      Just d -> Right (MyDay d)
-      Nothing -> Left "Invalid date"
+instance Parse MyDay where
+  parse :: Text -> Maybe MyDay
+  parse date = MyDay <$> iso8601ParseM (unpack date)
 
 newtype ExpirationTime = ExpirationTime {unExpirationTime :: UTCTime}

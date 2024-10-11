@@ -50,12 +50,13 @@ executable budget
       Handlers
       Handlers.Archive
       Handlers.Definition
-      Handlers.Global
       Handlers.Home
       Handlers.Login
+      Handlers.Model
       Handlers.Register
       Handlers.ResetPassword
       Handlers.Session
+      Handlers.Utils
       Html.Archive
       Html.Common
       Html.Definition

@@ -7,6 +7,7 @@ data AppError
   = DatabaseError Text
   | SessionError Text
   | UnknownError Text
+  | BadRequest Text
   | NotFoundError
   deriving (Show)
 

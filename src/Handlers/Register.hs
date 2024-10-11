@@ -1,38 +1,39 @@
 module Handlers.Register where
 
+import AppError (AppError)
 import Control.Monad (when)
-import Control.Monad.Trans (lift)
 import Data.Maybe (isJust, isNothing)
 import Effectful
+import Effectful.Error.Static (Error)
 import Effects.HashPassword
 import Effects.UserStore
+import Handlers.Model
+import Handlers.Utils
 import Html.Common (addToast)
 import Html.Login qualified as Login
 import Htmx.Attributes
 import Lucid
 import Model
-import Web.Scotty.ActionT (renderHtml)
-import Web.Scotty.Trans
 
 postRegister ::
   ( UserStore :> es
   , HashPassword :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
-  ActionT (Eff es) ()
-postRegister = do
-  emailAddress <- formParam "register-email"
-  password :: Password PlainText <- formParam "register-password"
-  passwordConfirmation <- formParam "register-password-confirm"
-  name <- formParam "register-name"
-  mUser <- lift $ Effects.UserStore.get emailAddress
+  Request ->
+  Eff es Response
+postRegister request = do
+  emailAddress <- getParam request "register-email"
+  password :: Password PlainText <- getParam request "register-password"
+  passwordConfirmation <- getParam request "register-password-confirm"
+  name <- getParam request "register-name"
+  mUser <- Effects.UserStore.get emailAddress
   if isNothing mUser && password == passwordConfirmation
     then do
-      hashed <- lift $ hashPassword password
-      lift $ Effects.UserStore.insert (User emailAddress name hashed)
-      setHeader "HX-Trigger" "hideRegistrationModal"
-      renderHtml $ addToast Success (span_ "You've been signed up! Please log in below")
-    else renderHtml do
+      hashed <- hashPassword password
+      Effects.UserStore.insert (User emailAddress name hashed)
+      pure $ makeResponse [("HX-Trigger", "hideRegistrationModal")] [] $ addToast Success (span_ "You've been signed up! Please log in below")
+    else pure $ htmlResponse do
       -- Validation problems
       when (isJust mUser) do
         Login.emailTakenError True True
@@ -49,20 +50,20 @@ postRegister = do
 
 postRegisterValidate ::
   ( UserStore :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
-  ActionT (Eff es) ()
-postRegisterValidate = do
-  isEmail <- (== Just "register-email") <$> header "HX-Trigger-Name"
-  emailAddress <- formParam "register-email"
-  password :: Password PlainText <- formParam "register-password"
-  passwordConfirmation <- formParam "register-password-confirm"
-  mUser <- lift $ Effects.UserStore.get emailAddress
+  Request ->
+  Eff es Response
+postRegisterValidate request = do
+  let isEmail = getHeader request "HX-Trigger-Name" == Just "register-email"
+  emailAddress <- getParam request "register-email"
+  password :: Password PlainText <- getParam request "register-password"
+  passwordConfirmation <- getParam request "register-password-confirm"
+  mUser <- Effects.UserStore.get emailAddress
   let isValid = isNothing mUser && password == passwordConfirmation
   if isValid
     then do
-      setHeader "HX-Reswap" "none"
-      renderHtml $ do
+      pure $ makeResponse [("HX-Reswap", "none")] [] $ do
         Login.emailTakenError True False
         Login.passwordConfirmationError True False
         button_
@@ -72,7 +73,7 @@ postRegisterValidate = do
           , hxSwapOob "outerHTML"
           ]
           "Sign Up"
-    else renderHtml do
+    else pure $ htmlResponse do
       Login.emailTakenError (not isEmail) (isJust mUser)
       Login.passwordConfirmationError isEmail (password /= passwordConfirmation)
       button_

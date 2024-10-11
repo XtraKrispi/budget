@@ -1,11 +1,12 @@
 module Handlers.ResetPassword where
 
-import Control.Monad.Trans (lift)
+import AppError (AppError)
 import Data.Time (
   addUTCTime,
   secondsToNominalDiffTime,
  )
 import Effectful
+import Effectful.Error.Static (Error)
 import Effectful.Reader.Static (Reader, asks)
 import Effects.HashPassword
 import Effects.Mail
@@ -17,7 +18,8 @@ import Environment (
   BaseUrl (BaseUrl),
   Environment (envBaseUrl),
  )
-import Handlers.Global (errorToast)
+import Handlers.Model
+import Handlers.Utils
 import Html.Common (addToast)
 import Html.ResetPassword qualified as ResetPassword
 import Lucid (button_, class_, disabled_, id_, span_, type_)
@@ -31,52 +33,55 @@ import Model (
  )
 import Network.URI.Encode (encodeText)
 import ResetPassword qualified
-import Web.Scotty.ActionT (renderHtml)
-import Web.Scotty.Trans (ActionT, captureParam, formParam, setHeader)
 
-getResetPassword :: (IOE :> es) => ActionT (Eff es) ()
-getResetPassword = renderHtml ResetPassword.landingPage
+getResetPassword :: Eff es Response
+getResetPassword = pure $ htmlResponse ResetPassword.landingPage
 
 postResetPassword ::
   ( ResetPasswordStore :> es
   , Time :> es
   , Mail :> es
   , Reader Environment :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
-  ActionT (Eff es) ()
-postResetPassword = do
-  email <- formParam "email"
-  (Token clearTextToken, hashedToken) <- lift Effects.ResetPasswordStore.generateToken
-  BaseUrl base <- lift $ asks envBaseUrl
+  Request ->
+  Eff es Response
+postResetPassword request = do
+  email <- getParam request "email"
+  (Token clearTextToken, hashedToken) <- Effects.ResetPasswordStore.generateToken
+  BaseUrl base <- asks envBaseUrl
   let url = base <> "/reset-password/" <> encodeText clearTextToken
-  expiry <- lift $ ExpirationTime . addUTCTime (secondsToNominalDiffTime (10 * 60)) <$> Effects.Time.now
-  lift $ Effects.ResetPasswordStore.insertToken email expiry hashedToken
-  lift $ sendMail email (Subject "Budget - Reset Password") (ResetPassword.resetPasswordEmail url)
-  setHeader "HX-Reswap" "none"
-  renderHtml $ addToast Success (span_ "If you have an account with Budget, please check your email for a password reset link.")
+  expiry <- ExpirationTime . addUTCTime (secondsToNominalDiffTime (10 * 60)) <$> Effects.Time.now
+  Effects.ResetPasswordStore.insertToken email expiry hashedToken
+  sendMail email (Subject "Budget - Reset Password") (ResetPassword.resetPasswordEmail url)
+  pure $
+    makeResponse [("HX-Reswap", "none")] [] $
+      addToast
+        Success
+        (span_ "If you have an account with Budget, please check your email for a password reset link.")
 
 getResetPasswordToken ::
   ( Time :> es
   , ResetPasswordStore :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
-  ActionT (Eff es) ()
-getResetPasswordToken = do
-  token <- captureParam "token"
-  now <- lift Effects.Time.now
-  mUser <- lift $ ResetPassword.getUser token now <$> Effects.ResetPasswordStore.getUsers
+  Request ->
+  Eff es Response
+getResetPasswordToken request = do
+  token <- getParam request "token"
+  now <- Effects.Time.now
+  mUser <- ResetPassword.getUser token now <$> Effects.ResetPasswordStore.getUsers
   case mUser of
     Just _user ->
-      renderHtml $ ResetPassword.tokenPage token
-    _ -> renderHtml ResetPassword.errorPage
+      pure $ htmlResponse $ ResetPassword.tokenPage token
+    _ -> pure $ htmlResponse ResetPassword.errorPage
 
-postResetPasswordValidate :: (IOE :> es) => ActionT (Eff es) ()
-postResetPasswordValidate = do
-  password :: Password PlainText <- formParam "password"
-  passwordConfirmation <- formParam "password-confirmation"
+postResetPasswordValidate :: (Error AppError :> es) => Request -> Eff es Response
+postResetPasswordValidate request = do
+  password :: Password PlainText <- getParam request "password"
+  passwordConfirmation <- getParam request "password-confirmation"
   if password /= passwordConfirmation
-    then renderHtml $ do
+    then pure $ htmlResponse do
       ResetPassword.passwordConfirmationError True True
       button_
         [ class_ "btn btn-primary"
@@ -86,7 +91,7 @@ postResetPasswordValidate = do
         ]
         "Reset Password"
     else do
-      renderHtml $ do
+      pure $ htmlResponse do
         ResetPassword.passwordConfirmationError True False
         button_
           [ class_ "btn btn-primary"
@@ -100,24 +105,28 @@ postResetPasswordToken ::
   , UserStore :> es
   , Time :> es
   , HashPassword :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
-  ActionT (Eff es) ()
-postResetPasswordToken = do
-  token <- formParam "token"
-  password :: Password PlainText <- formParam "password"
-  passwordConfirmation <- formParam "password-confirmation"
-  now <- lift Effects.Time.now
-  mUser <- lift $ ResetPassword.getUser token now <$> Effects.ResetPasswordStore.getUsers
-  let errorResponse = errorToast "Something went wrong, please try again."
+  Request ->
+  Eff es Response
+postResetPasswordToken request = do
+  token <- getParam request "token"
+  password :: Password PlainText <- getParam request "password"
+  passwordConfirmation <- getParam request "password-confirmation"
+  now <- Effects.Time.now
+  mUser <- ResetPassword.getUser token now <$> Effects.ResetPasswordStore.getUsers
+  let err = errorResponse "Something went wrong, please try again."
   case mUser of
     (Just user) ->
       if password == passwordConfirmation
         then do
-          hashed <- lift $ Effects.HashPassword.hashPassword password
-          lift $ Effects.UserStore.updatePassword user.email hashed
-          lift $ Effects.ResetPasswordStore.removeUserTokens user.email
-          setHeader "HX-Redirect" "/login"
-          renderHtml $ addToast Success (span_ "You have successfully reset your password, you may now log in.")
-        else errorResponse
-    _ -> errorResponse
+          hashed <- Effects.HashPassword.hashPassword password
+          Effects.UserStore.updatePassword user.email hashed
+          Effects.ResetPasswordStore.removeUserTokens user.email
+          pure $
+            makeResponse [("HX-Redirect", "/login")] [] $
+              addToast
+                Success
+                (span_ "You have successfully reset your password, you may now log in.")
+        else pure err
+    _ -> pure err

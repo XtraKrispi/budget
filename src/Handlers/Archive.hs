@@ -1,50 +1,52 @@
 module Handlers.Archive where
 
-import Control.Monad.Trans (lift)
+import AppError
 import Effectful
+import Effectful.Error.Static (Error)
 import Effects.ArchiveStore
 import Effects.MakeMyUUID
 import Effects.Time
+import Handlers.Model
+import Handlers.Utils (getParam, headerResponse, htmlResponse)
 import Html.Archive qualified as Archive
 import Htmx.Request (isBoosted, isHtmx)
 import Id
 import Model (ArchiveAction, ArchivedItem (..), MyDay (unMyDay), User (email))
-import Web.Scotty.ActionT (renderHtml)
-import Web.Scotty.Trans (ActionT, formParam, setHeader)
 
 getArchive ::
   ( ArchiveStore :> es
-  , IOE :> es
   ) =>
+  Request ->
   User ->
-  ActionT (Eff es) ()
-getArchive user = do
-  htmx <- isHtmx
-  boosted <- isBoosted
+  Eff es Response
+getArchive request user = do
+  let htmx = isHtmx request
+  let boosted = isBoosted request
   if htmx && not boosted
     then do
-      items <- lift $ getAll user.email
-      renderHtml $ Archive.items items
+      items <- getAll user.email
+      pure $ htmlResponse $ Archive.items items
     else do
-      renderHtml $ Archive.archivePage user
+      pure $ htmlResponse $ Archive.archivePage user
 
 postArchiveAction ::
   ( MakeMyUUID :> es
   , Time :> es
   , ArchiveStore :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
   ArchiveAction ->
+  Request ->
   User ->
-  ActionT (Eff es) ()
-postArchiveAction archivedItemAction user = do
-  archivedItemAmount <- formParam "itemAmount"
-  archivedItemDate <- unMyDay <$> formParam "itemDate"
-  archivedItemItemDefinitionId <- formParam "itemDefinitionId"
-  archivedItemDescription <- formParam "itemDescription"
+  Eff es Response
+postArchiveAction archivedItemAction request user = do
+  archivedItemAmount <- getParam request "itemAmount"
+  archivedItemDate <- unMyDay <$> getParam request "itemDate"
+  archivedItemItemDefinitionId <- getParam request "itemDefinitionId"
+  archivedItemDescription <- getParam request "itemDescription"
 
-  archivedItemId <- lift $ Id <$> generate
-  archivedItemActionDate <- lift today
+  archivedItemId <- Id <$> generate
+  archivedItemActionDate <- today
 
   let item =
         ArchivedItem
@@ -56,6 +58,6 @@ postArchiveAction archivedItemAction user = do
           archivedItemActionDate
           archivedItemAction
 
-  lift $ insert user.email item
+  insert user.email item
 
-  setHeader "HX-Trigger" "reload"
+  pure $ headerResponse "HX-Trigger" "reload"

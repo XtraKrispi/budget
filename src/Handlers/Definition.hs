@@ -1,47 +1,49 @@
 module Handlers.Definition where
 
-import Control.Monad.Trans (lift)
+import AppError (AppError)
 import Effectful
+import Effectful.Error.Static
 import Effects.DefinitionStore
 import Effects.DefinitionStore qualified as Effect.DefinitionStore
 import Effects.MakeId
 import Effects.Time (Time)
 import Effects.Time qualified
-import Handlers.Global (errorToast)
+import Handlers.Model (Request, Response)
+import Handlers.Utils
 import Html.Definition (definitions, definitionsModal, definitionsPage)
 import Htmx.Request (isBoosted, isHtmx)
 import Model
-import Web.Scotty.ActionT (captureParamMaybe, optionalFormParam, renderHtml, toggleFormParam)
-import Web.Scotty.Trans (ActionT, formParam, setHeader)
 
 getDefinitionPage ::
-  (DefinitionStore :> es, IOE :> es) =>
+  (DefinitionStore :> es) =>
+  Request ->
   User ->
-  ActionT (Eff es) ()
-getDefinitionPage user = do
-  htmx <- isHtmx
-  boosted <- isBoosted
+  Eff es Response
+getDefinitionPage request user = do
+  let htmx = isHtmx request
+  let boosted = isBoosted request
   if htmx && not boosted
     then do
-      ds <- lift $ Effects.DefinitionStore.getAll user.email
-      renderHtml $ definitions ds
+      ds <- Effects.DefinitionStore.getAll user.email
+      pure $ htmlResponse $ definitions ds
     else do
-      renderHtml $ definitionsPage user
+      pure $ htmlResponse $ definitionsPage user
 
 getDefinitionEdit ::
   ( Time :> es
   , DefinitionStore :> es
   , MakeId :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
+  Request ->
   User ->
-  ActionT (Eff es) ()
-getDefinitionEdit user = do
-  mId <- captureParamMaybe "defId"
-  today <- lift Effects.Time.today
-  newId <- lift Effects.MakeId.generate
+  Eff es Response
+getDefinitionEdit request user = do
+  mId <- getParamMaybe request "defId"
+  today <- Effects.Time.today
+  newId <- Effects.MakeId.generate
   mDefinition <- case mId of
-    Just i -> lift $ Effects.DefinitionStore.get user.email i
+    Just i -> Effects.DefinitionStore.get user.email i
     Nothing ->
       pure $
         pure $
@@ -57,24 +59,24 @@ getDefinitionEdit user = do
 
   case mDefinition of
     (Just definition) -> do
-      setHeader "HX-Trigger-After-Settle" "showDefinitionsModal"
-      renderHtml $ definitionsModal $ Just definition
-    _ -> errorToast "There was an issue fetching the definition.  Please try again."
+      pure $ makeResponse [("HX-Trigger-After-Settle", "showDefinitionsModal")] [] (definitionsModal $ Just definition)
+    _ -> pure $ errorResponse "There was an issue fetching the definition.  Please try again."
 
 postDefinitionEdit ::
   ( DefinitionStore :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
+  Request ->
   User ->
-  ActionT (Eff es) ()
-postDefinitionEdit user = do
-  definitionId <- formParam "id"
-  definitionDescription <- formParam "description"
-  definitionAmount <- formParam "amount"
-  definitionFrequency <- formParam "frequency"
-  definitionIsAutomaticWithdrawal <- toggleFormParam "is-automatic-withdrawal"
-  definitionStartDate <- unMyDay <$> formParam "start-date"
-  definitionEndDate <- fmap unMyDay <$> optionalFormParam "end-date"
+  Eff es Response
+postDefinitionEdit request user = do
+  definitionId <- getParam request "id"
+  definitionDescription <- getParam request "description"
+  definitionAmount <- getParam request "amount"
+  definitionFrequency <- getParam request "frequency"
+  let definitionIsAutomaticWithdrawal = getToggleParam request "is-automatic-withdrawal"
+  definitionStartDate <- unMyDay <$> getParam request "start-date"
+  definitionEndDate <- fmap unMyDay <$> getParamMaybe request "end-date"
   let definition =
         Definition
           definitionId
@@ -85,5 +87,5 @@ postDefinitionEdit user = do
           definitionEndDate
           definitionIsAutomaticWithdrawal
 
-  lift $ Effect.DefinitionStore.save user.email definition
-  setHeader "HX-Trigger" "hideDefinitionsModal, reload"
+  Effect.DefinitionStore.save user.email definition
+  pure $ headerResponse "HX-Trigger" "hideDefinitionsModal, reload"

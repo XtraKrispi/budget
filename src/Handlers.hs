@@ -1,6 +1,5 @@
 module Handlers (
   module Handlers.Session,
-  module Handlers.Global,
   module Handlers.Home,
   module Handlers.Login,
   module Handlers.Register,
@@ -11,7 +10,6 @@ module Handlers (
 
 import Handlers.Archive
 import Handlers.Definition
-import Handlers.Global
 import Handlers.Home
 import Handlers.Login
 import Handlers.Register

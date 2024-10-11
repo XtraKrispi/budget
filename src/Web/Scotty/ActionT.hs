@@ -1,17 +1,25 @@
+{-# LANGUAGE DuplicateRecordFields #-}
+
 module Web.Scotty.ActionT where
 
-import Control.Monad.IO.Class (MonadIO)
-import Data.Foldable (find)
-import Data.Text (Text)
+import Data.Bifunctor (Bifunctor (bimap))
+import Data.Foldable (find, traverse_)
+import Data.Function (on)
+import Data.Text.Encoding (encodeUtf8)
+import Data.Text.Lazy (fromStrict, toStrict)
 import Data.Text.Lazy qualified as LT
-import Htmx.Request qualified as Htmx
+import Effectful
+import Handlers.Model
 import Lucid (Html, renderText)
+import Web.Scotty (ActionM)
+import Web.Scotty.Cookie (SetCookie (setCookieHttpOnly, setCookieMaxAge, setCookieName, setCookieSecure, setCookieValue), defaultSetCookie, getCookies, setCookie)
 import Web.Scotty.Internal.Types (ActionT)
-import Web.Scotty.Trans (Parsable (parseParam), captureParams, formParams, html, redirect, setHeader)
+import Web.Scotty.Trans (Parsable (parseParam), html, redirect, setHeader)
+import Web.Scotty.Trans qualified
 
 captureParamMaybe :: (Monad m, Parsable a) => LT.Text -> ActionT m (Maybe a)
 captureParamMaybe param = do
-  params <- captureParams
+  params <- Web.Scotty.Trans.captureParams
   case find (\(p, _) -> p == param) params of
     Just (_, t) ->
       case parseParam t of
@@ -22,7 +30,7 @@ captureParamMaybe param = do
 -- Toggles either send  "on" or nothing at all
 toggleFormParam :: (Monad m) => LT.Text -> ActionT m Bool
 toggleFormParam param = do
-  params <- formParams
+  params <- Web.Scotty.Trans.formParams
   case find (\(p, _) -> p == param) params of
     Just (_, "on") -> pure True
     _ -> pure False
@@ -30,7 +38,7 @@ toggleFormParam param = do
 -- Optionals either send the value or empty string
 optionalFormParam :: (Monad m, Parsable a) => LT.Text -> ActionT m (Maybe a)
 optionalFormParam param = do
-  params <- formParams
+  params <- Web.Scotty.Trans.formParams
   case find (\(p, _) -> p == param) params of
     Just (_, "") -> pure Nothing
     Just (_, txt) -> case parseParam txt of
@@ -38,14 +46,33 @@ optionalFormParam param = do
       Left _ -> pure Nothing
     _ -> pure Nothing
 
-redirectTo :: (MonadIO m) => Text -> ActionT m ()
-redirectTo url = do
-  htmx <- Htmx.isHtmx
-  if htmx
-    then
-      setHeader "HX-Location" (LT.fromStrict url)
-    else
-      redirect (LT.fromStrict url)
-
 renderHtml :: (MonadIO m) => Html a -> ActionT m ()
 renderHtml = html . renderText
+
+runHandler :: (Eff es Response -> IO Response) -> (Request -> Eff es Response) -> ActionM ()
+runHandler runProgram handler = do
+  headers <- fmap (bimap toStrict toStrict) <$> Web.Scotty.Trans.headers
+  urlParams <- fmap (bimap toStrict toStrict) <$> Web.Scotty.Trans.captureParams
+  formParams <- fmap (bimap toStrict toStrict) <$> Web.Scotty.Trans.formParams
+  queryParams <- fmap (bimap toStrict toStrict) <$> Web.Scotty.Trans.queryParams
+
+  reqCookies <- getCookies
+
+  response <- liftIO $ runProgram $ handler $ Request reqCookies headers (formParams ++ queryParams ++ urlParams)
+  case response of
+    SamePage (SamePageResponse hs cookies content) -> do
+      traverse_ (uncurry (setHeader `on` fromStrict)) hs
+      traverse_ (setCookie . convertToCookie) cookies
+      renderHtml content
+    Redirect (RedirectResponse url) ->
+      redirect (fromStrict url)
+ where
+  convertToCookie :: Cookie -> SetCookie
+  convertToCookie cookie =
+    defaultSetCookie
+      { setCookieName = encodeUtf8 cookie.cookieName
+      , setCookieValue = encodeUtf8 cookie.cookieValue
+      , setCookieMaxAge = cookie.cookieMaxAge
+      , setCookieHttpOnly = cookie.cookieHttpOnly
+      , setCookieSecure = cookie.cookieSecure
+      }

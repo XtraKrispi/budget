@@ -1,53 +1,55 @@
 module Handlers.Home (getHome, postHome) where
 
-import Control.Monad.Trans (lift)
+import AppError (AppError)
 import Data.List (sortOn)
 import Data.Maybe (fromMaybe)
 import Data.Time (Day, addDays, addGregorianMonthsClip)
 import Effectful
+import Effectful.Error.Static (Error)
 import Effects.ArchiveStore
 import Effects.DefinitionStore
 import Effects.ScratchStore
 import Effects.Time
+import Handlers.Model
+import Handlers.Utils (getParam, htmlResponse)
 import Html.Home qualified as Home
 import Htmx.Request (isBoosted, isHtmx)
 import Model
-import Web.Scotty.ActionT (renderHtml)
-import Web.Scotty.Trans (ActionT, formParam)
 
 getHome ::
   ( DefinitionStore :> es
   , Time :> es
   , ArchiveStore :> es
   , ScratchStore :> es
-  , IOE :> es
   ) =>
+  Request ->
   User ->
-  ActionT (Eff es) ()
-getHome user = do
-  htmx <- isHtmx
-  boosted <- isBoosted
+  Eff es Response
+getHome request user = do
+  let htmx = isHtmx request
+  let boosted = isBoosted request
   if not boosted && htmx
     then do
       homeContent user
-    else renderHtml $ Home.homePage user
+    else pure $ htmlResponse $ Home.homePage user
 
 postHome ::
   ( DefinitionStore :> es
   , ArchiveStore :> es
   , ScratchStore :> es
   , Time :> es
-  , IOE :> es
+  , Error AppError :> es
   ) =>
+  Request ->
   User ->
-  ActionT (Eff es) ()
-postHome user = do
-  endDate <- unMyDay <$> formParam "end-date"
-  amountInBank <- formParam "amount-in-bank"
-  amountLeftOver <- formParam "amount-left-over"
+  Eff es Response
+postHome request user = do
+  endDate <- unMyDay <$> getParam request "end-date"
+  amountInBank <- getParam request "amount-in-bank"
+  amountLeftOver <- getParam request "amount-left-over"
 
   let scratch = Scratch endDate amountInBank amountLeftOver
-  lift $ Effects.ScratchStore.save user.email scratch
+  Effects.ScratchStore.save user.email scratch
   homeContent user
 
 homeContent ::
@@ -55,17 +57,16 @@ homeContent ::
   , ArchiveStore :> es
   , ScratchStore :> es
   , Time :> es
-  , IOE :> es
   ) =>
   User ->
-  ActionT (Eff es) ()
+  Eff es Response
 homeContent user = do
-  defaultScratch <- lift $ (\t -> Scratch (addDays 21 t) 0 0) <$> today
-  scratch <- lift $ fromMaybe defaultScratch <$> Effects.ScratchStore.get user.email
-  definitions <- lift $ Effects.DefinitionStore.getAll user.email
-  archive <- lift $ Effects.ArchiveStore.getAll user.email
+  defaultScratch <- (\t -> Scratch (addDays 21 t) 0 0) <$> today
+  scratch <- fromMaybe defaultScratch <$> Effects.ScratchStore.get user.email
+  definitions <- Effects.DefinitionStore.getAll user.email
+  archive <- Effects.ArchiveStore.getAll user.email
   let items = getItems scratch.endDate definitions archive
-  renderHtml $ Home.homeContent items scratch
+  pure $ htmlResponse $ Home.homeContent items scratch
 
 getItems :: Day -> [Definition] -> [ArchivedItem] -> [Item]
 getItems endDate definitions archivedItems =

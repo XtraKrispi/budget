@@ -1,10 +1,11 @@
 module Htmx.Request where
 
+import Data.Foldable (find)
 import Data.Maybe (isJust)
-import Web.Scotty.Trans (ActionT, header)
+import Handlers.Model (Request (..))
 
-isHtmx :: (Monad m) => ActionT m Bool
-isHtmx = isJust <$> header "HX-Request"
+isHtmx :: Request -> Bool
+isHtmx request = isJust $ find (\(t, _) -> t == "HX-Request") request.requestHeaders
 
-isBoosted :: (Monad m) => ActionT m Bool
-isBoosted = isJust <$> header "HX-Boosted"
+isBoosted :: Request -> Bool
+isBoosted request = isJust $ find (\(t, _) -> t == "HX-Boosted") request.requestHeaders

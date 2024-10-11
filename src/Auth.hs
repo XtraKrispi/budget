@@ -1,8 +1,7 @@
 module Auth where
 
 import Control.Monad (when)
-import Control.Monad.Trans (lift)
-import Data.Text.Encoding (encodeUtf8)
+import Data.Foldable (find)
 import Data.Time (
   addUTCTime,
   diffUTCTime,
@@ -14,11 +13,10 @@ import Effectful.Reader.Static (Reader, asks)
 import Effects.SessionStore
 import Effects.Time
 import Environment (Environment (envAuthCookieName))
+import Handlers.Model
+import Handlers.Utils (redirectTo)
 import Model (ExpirationTime (..), SessionId (..), User)
 import MyUUID
-import Web.Scotty.ActionT (redirectTo)
-import Web.Scotty.Cookie (SetCookie (..), defaultSetCookie, getCookie, setCookie)
-import Web.Scotty.Trans (ActionT)
 
 validateCookie ::
   ( Time :> es
@@ -41,59 +39,55 @@ validateCookie sessionId = do
         else do
           pure Nothing
 
--- getAuthCookie ::
---   ( Reader env :> es
---   , HasAuthCookieName env
---   ) =>
-getAuthCookie :: (Reader Environment :> es) => ActionT (Eff es) (Maybe SessionId)
-getAuthCookie = do
-  cookieName <- lift $ asks envAuthCookieName
-  val <- getCookie cookieName
-  case val >>= MyUUID.fromText of
+getAuthCookie :: (Reader Environment :> es) => Request -> Eff es (Maybe SessionId)
+getAuthCookie request = do
+  name <- asks envAuthCookieName
+  let mVal = snd <$> find (\(n, _) -> n == name) request.requestCookies
+  case mVal >>= MyUUID.fromText of
     Just i -> pure $ Just (SessionId i)
     Nothing -> pure Nothing
 
-invalidateAuthCookie :: (IOE :> es, Reader Environment :> es) => ActionT (Eff es) ()
+invalidateAuthCookie :: (Reader Environment :> es) => Eff es Cookie
 invalidateAuthCookie = do
-  cookieName <- lift $ asks envAuthCookieName
-  setCookie
-    defaultSetCookie
-      { setCookieName = encodeUtf8 cookieName
-      , setCookieValue = ""
-      , setCookieMaxAge = Just (-100)
-      , setCookieHttpOnly = True
-      , setCookieSecure = True
+  cookieName <- asks envAuthCookieName
+  pure $
+    Cookie
+      { cookieName = cookieName
+      , cookieValue = ""
+      , cookieMaxAge = Just (-100)
+      , cookieHttpOnly = True
+      , cookieSecure = True
       }
 
-setAuthCookie :: (IOE :> es, Reader Environment :> es) => SessionId -> ActionT (Eff es) ()
-setAuthCookie sessionId = do
-  cookieName <- lift $ asks envAuthCookieName
-  setCookie
-    defaultSetCookie
-      { setCookieName = encodeUtf8 cookieName
-      , setCookieValue = encodeUtf8 $ MyUUID.toText $ unSessionId sessionId
-      , setCookieMaxAge = Just 1200
-      , setCookieHttpOnly = True
-      , setCookieSecure = True
+newAuthCookie :: (Reader Environment :> es) => SessionId -> Eff es Cookie
+newAuthCookie sessionId = do
+  cookieName <- asks envAuthCookieName
+  pure $
+    Cookie
+      { cookieName = cookieName
+      , cookieValue = MyUUID.toText $ unSessionId sessionId
+      , cookieMaxAge = Just 1200
+      , cookieHttpOnly = True
+      , cookieSecure = True
       }
 
 requiresAuth ::
   ( Time :> es
   , SessionStore :> es
   , Reader Environment :> es
-  , IOE :> es
   ) =>
-  (User -> ActionT (Eff es) ()) ->
-  ActionT (Eff es) ()
-requiresAuth route = do
-  mSessionId <- getAuthCookie
+  (Request -> User -> Eff es Response) ->
+  Request ->
+  Eff es Response
+requiresAuth route request = do
+  mSessionId <- getAuthCookie request
   case mSessionId of
     Just sessionId -> do
-      cookieResult <- lift $ validateCookie sessionId
+      cookieResult <- validateCookie sessionId
       case cookieResult of
         Just user ->
-          route user
+          route request user
         Nothing ->
-          redirectTo "/login"
+          pure $ redirectTo request "/login"
     Nothing ->
-      redirectTo "/login"
+      pure $ redirectTo request "/login"
