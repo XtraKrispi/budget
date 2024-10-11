@@ -1,7 +1,7 @@
 module Id where
 
 import Data.Aeson
-import Data.Text (Text, pack)
+import Data.Text (Text)
 import Database.SQLite.Simple.FromField
 import Database.SQLite.Simple.ToField
 import Effectful
@@ -12,11 +12,6 @@ import MyUUID qualified
 
 newtype Id a = Id {unId :: MyUUID}
   deriving (Show, Eq, ToField, FromField, FromJSON, ToJSON)
-
-instance Read (Id a) where
-  readsPrec _ input = case MyUUID.fromText (pack input) of
-    Just uuid -> [(Id uuid, "")]
-    Nothing -> []
 
 instance Parse (Id b) where
   parse :: forall k (a :: k). Text -> Maybe (Id a)

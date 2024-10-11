@@ -1,7 +1,7 @@
 module Model where
 
 import Data.Aeson (Encoding, FromJSON, ToJSON (toEncoding), defaultOptions, fieldLabelModifier, genericToEncoding)
-import Data.Text (Text, pack, toLower, unpack)
+import Data.Text (Text, toLower, unpack)
 import Data.Time (Day, UTCTime)
 import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Database.SQLite.Simple (SQLData (..))
@@ -21,9 +21,6 @@ data Hashed
 newtype Password a = Password {unPassword :: Text}
   deriving (Show, Eq)
 
-instance Read (Password PlainText) where
-  readsPrec _ input = [(Password (pack input), "")]
-
 instance Parse (Password PlainText) where
   parse = pure . Password
 instance ToField (Password Hashed) where
@@ -39,9 +36,6 @@ instance FromField (Password Hashed) where
 
 newtype Token a = Token {unToken :: Text}
   deriving (Show, Eq)
-
-instance Read (Token PlainText) where
-  readsPrec _ input = [(Token (pack input), "")]
 
 instance ToField (Token Hashed) where
   toField :: Token Hashed -> SQLData
@@ -60,9 +54,6 @@ instance Parse (Token PlainText) where
 
 newtype Email = Email {unEmail :: Text}
   deriving (Show, Eq, Ord, FromField)
-
-instance Read Email where
-  readsPrec _ input = [(Email (pack input), "")]
 
 instance Parse Email where
   parse = pure . Email
@@ -182,12 +173,6 @@ instance FromJSON Item
 
 newtype MyDay = MyDay {unMyDay :: Day}
   deriving (Show)
-
-instance Read MyDay where
-  readsPrec :: Int -> ReadS MyDay
-  readsPrec _ input = case iso8601ParseM input of
-    Just d -> [(MyDay d, "")]
-    Nothing -> []
 
 instance Parse MyDay where
   parse :: Text -> Maybe MyDay
