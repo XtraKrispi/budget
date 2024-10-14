@@ -9,7 +9,6 @@ import Handlers.Model
 import Html.Common
 import Htmx.Request qualified as Htmx
 import Lucid
-import Model (AlertType (Error))
 
 getParam :: (Parse a, Error AppError :> es) => Request -> Text -> Eff es a
 getParam request name =

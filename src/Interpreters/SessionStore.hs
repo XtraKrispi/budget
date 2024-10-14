@@ -14,8 +14,11 @@ import Effectful.Reader.Static (Reader)
 import Effectful.State.Static.Local
 import Effects.SessionStore (SessionStore (..))
 import Environment
-import Model (Email (unEmail), ExpirationTime (..), Password (..), SessionId (..), User (..))
-import MyUUID (MyUUID (MyUUID))
+import Model.Common
+import Model.Email
+import Model.MyUUID
+import Model.Password
+import Model.User
 
 runSessionStoreSqlite ::
   ( IOE :> es

@@ -6,7 +6,8 @@ module Effects.ArchiveStore where
 
 import Effectful (Effect)
 import Effectful.TH (makeEffect)
-import Model (ArchivedItem, Email)
+import Model.Archive
+import Model.Email
 
 data ArchiveStore :: Effect where
   GetAll :: Email -> ArchiveStore m [ArchivedItem]

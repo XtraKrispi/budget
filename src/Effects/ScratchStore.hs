@@ -6,7 +6,8 @@ module Effects.ScratchStore where
 
 import Effectful
 import Effectful.TH (makeEffect)
-import Model
+import Model.Email
+import Model.Scratch
 
 data ScratchStore :: Effect where
   Get :: Email -> ScratchStore m (Maybe Scratch)

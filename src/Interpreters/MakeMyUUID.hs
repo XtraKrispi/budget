@@ -4,7 +4,8 @@ import Data.UUID qualified as UUID
 import Effectful
 import Effectful.Dispatch.Dynamic (interpret)
 import Effects.MakeMyUUID (MakeMyUUID (..))
-import MyUUID (MyUUID (..), nextRandom)
+import Model.MyUUID (MyUUID (..))
+import Model.MyUUID qualified as MyUUID
 
 runMakeMyUUIDIO :: (IOE :> es) => Eff (MakeMyUUID : es) a -> Eff es a
 runMakeMyUUIDIO = interpret \_ -> \case

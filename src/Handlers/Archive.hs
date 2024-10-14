@@ -10,8 +10,9 @@ import Handlers.Model
 import Handlers.Utils (getParam, headerResponse, htmlResponse)
 import Html.Archive qualified as Archive
 import Htmx.Request (isBoosted, isHtmx)
-import Id
-import Model (ArchiveAction, ArchivedItem (..), MyDay (unMyDay), User (email))
+import Model.Archive
+import Model.Id
+import Model.User
 
 getArchive ::
   ( ArchiveStore :> es
@@ -41,7 +42,7 @@ postArchiveAction ::
   Eff es Response
 postArchiveAction archivedItemAction request user = do
   archivedItemAmount <- getParam request "itemAmount"
-  archivedItemDate <- unMyDay <$> getParam request "itemDate"
+  archivedItemDate <- getParam request "itemDate"
   archivedItemItemDefinitionId <- getParam request "itemDefinitionId"
   archivedItemDescription <- getParam request "itemDescription"
 

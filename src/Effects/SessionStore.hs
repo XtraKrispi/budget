@@ -6,7 +6,9 @@ module Effects.SessionStore where
 
 import Effectful
 import Effectful.TH (makeEffect)
-import Model
+import Model.Common
+import Model.Email
+import Model.User
 
 data SessionStore :: Effect where
   NewSession :: Email -> ExpirationTime -> SessionStore m SessionId

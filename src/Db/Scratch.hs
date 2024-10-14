@@ -10,7 +10,8 @@ import Effectful
 import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
-import Model
+import Model.Email
+import Model.Scratch
 import Text.RawString.QQ
 
 getScratch :: (IOE :> es, Reader Environment :> es, Error AppError :> es) => Email -> Eff es (Maybe Scratch)

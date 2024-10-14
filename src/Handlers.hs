@@ -6,9 +6,11 @@ module Handlers (
   module Handlers.ResetPassword,
   module Handlers.Archive,
   module Handlers.Definition,
+  module Handlers.Auth,
 ) where
 
 import Handlers.Archive
+import Handlers.Auth
 import Handlers.Definition
 import Handlers.Home
 import Handlers.Login

@@ -8,7 +8,9 @@ import Data.Time.Format.ISO8601 (ISO8601 (iso8601Format), formatShow)
 import Html.Common (withLayout)
 import Htmx.Attributes
 import Lucid
-import Model (Item (..), Scratch (..), User)
+import Model.Item
+import Model.Scratch
+import Model.User
 
 homePage :: User -> Html ()
 homePage user = withLayout user $ div_ [class_ "px-20 py-10"] do

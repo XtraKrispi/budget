@@ -14,7 +14,8 @@ import Effectful.Reader.Static (Reader)
 import Effectful.State.Static.Local
 import Effects.ArchiveStore (ArchiveStore (..))
 import Environment
-import Model (ArchivedItem, Email)
+import Model.Archive
+import Model.Email
 
 runArchiveStoreSqlite ::
   ( IOE :> es

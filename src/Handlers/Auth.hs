@@ -1,4 +1,4 @@
-module Auth where
+module Handlers.Auth where
 
 import Control.Monad (when)
 import Data.Foldable (find)
@@ -15,8 +15,9 @@ import Effects.Time
 import Environment (Environment (envAuthCookieName))
 import Handlers.Model
 import Handlers.Utils (redirectTo)
-import Model (ExpirationTime (..), SessionId (..), User)
-import MyUUID
+import Model.Common
+import Model.MyUUID qualified as MyUUID
+import Model.User
 
 validateCookie ::
   ( Time :> es

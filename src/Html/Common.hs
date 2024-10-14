@@ -1,10 +1,10 @@
-module Html.Common (withPageShell, withLayout, addToast, classList) where
+module Html.Common (withPageShell, withLayout, addToast, classList, AlertType (..)) where
 
 import Data.Text (Text)
 import Data.Text qualified as T
 import Htmx.Attributes
 import Lucid
-import Model (AlertType (..), User)
+import Model.User (User)
 import Svg (d_, fill_, path_, strokeLinecap_, strokeLinejoin_, strokeWidth_, stroke_, viewBox_)
 
 withPageShell :: Html () -> Html ()
@@ -72,6 +72,13 @@ navbar = div_ [class_ "navbar bg-base-100", hxBoost] do
     li_ [] do
       a_ [href_ url] do
         toHtml text
+
+data AlertType
+  = Info
+  | Success
+  | Warning
+  | Error
+  deriving (Eq)
 
 addToast :: AlertType -> Html () -> Html ()
 addToast alertType content = do

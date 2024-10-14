@@ -6,8 +6,9 @@ module Effects.DefinitionStore where
 
 import Effectful (Effect)
 import Effectful.TH (makeEffect)
-import Id (Id)
-import Model (Definition, Email)
+import Model.Definition
+import Model.Email
+import Model.Id
 
 data DefinitionStore :: Effect where
   GetAll :: Email -> DefinitionStore m [Definition]

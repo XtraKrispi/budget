@@ -9,7 +9,7 @@ import Effects.Mail
 import Environment (Environment (envSmtp), Smtp (..))
 import Interpreters.Helpers (adapt)
 import Lucid
-import Model (Email (..))
+import Model.Email (Email (..))
 import Network.Mail.Mime (Address (..), htmlPart)
 import Network.Mail.SMTP (sendMailWithLoginTLS, simpleMail)
 

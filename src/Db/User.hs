@@ -12,7 +12,11 @@ import Effectful
 import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
-import Model
+import Model.Common
+import Model.Email
+import Model.Password
+import Model.Token
+import Model.User
 import Text.RawString.QQ
 
 getUserByEmail ::

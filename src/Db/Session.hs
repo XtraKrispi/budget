@@ -10,8 +10,10 @@ import Effectful
 import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
-import Model
-import MyUUID qualified
+import Model.Common
+import Model.Email
+import Model.MyUUID qualified as MyUUID
+import Model.User
 import Text.RawString.QQ
 
 createSession ::

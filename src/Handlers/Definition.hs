@@ -12,7 +12,8 @@ import Handlers.Model (Request, Response)
 import Handlers.Utils
 import Html.Definition (definitions, definitionsModal, definitionsPage)
 import Htmx.Request (isBoosted, isHtmx)
-import Model
+import Model.Definition (Definition (..), Frequency (..))
+import Model.User
 
 getDefinitionPage ::
   (DefinitionStore :> es) =>
@@ -75,8 +76,8 @@ postDefinitionEdit request user = do
   definitionAmount <- getParam request "amount"
   definitionFrequency <- getParam request "frequency"
   let definitionIsAutomaticWithdrawal = getToggleParam request "is-automatic-withdrawal"
-  definitionStartDate <- unMyDay <$> getParam request "start-date"
-  definitionEndDate <- fmap unMyDay <$> getParamMaybe request "end-date"
+  definitionStartDate <- getParam request "start-date"
+  definitionEndDate <- getParamMaybe request "end-date"
   let definition =
         Definition
           definitionId

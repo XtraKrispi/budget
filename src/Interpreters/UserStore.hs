@@ -10,7 +10,7 @@ import Effectful.Reader.Static (Reader)
 import Effectful.State.Static.Local (evalState, gets, modify)
 import Effects.UserStore
 import Environment
-import Model (User (..))
+import Model.User
 
 runUserStoreSqlite ::
   ( Reader Environment :> es

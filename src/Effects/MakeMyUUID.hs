@@ -6,7 +6,7 @@ module Effects.MakeMyUUID where
 
 import Effectful
 import Effectful.TH (makeEffect)
-import MyUUID
+import Model.MyUUID
 
 data MakeMyUUID :: Effect where
   Generate :: MakeMyUUID m MyUUID

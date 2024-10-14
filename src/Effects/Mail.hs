@@ -8,7 +8,7 @@ import Data.Text (Text)
 import Effectful
 import Effectful.TH (makeEffect)
 import Lucid
-import Model (Email)
+import Model.Email (Email)
 
 newtype Subject = Subject {unSubject :: Text}
 

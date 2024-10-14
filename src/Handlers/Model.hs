@@ -2,6 +2,8 @@ module Handlers.Model where
 
 import Data.Text (Text, unpack)
 import Data.Time (DiffTime)
+import Data.Time.Calendar (Day)
+import Data.Time.Format.ISO8601 (iso8601ParseM)
 import Lucid
 import Text.Read (readMaybe)
 
@@ -15,6 +17,10 @@ instance Parse Double where
 instance Parse Text where
   parse :: Text -> Maybe Text
   parse = pure
+
+instance Parse Day where
+  parse :: Text -> Maybe Day
+  parse date = iso8601ParseM (unpack date)
 
 type Header = (Text, Text)
 

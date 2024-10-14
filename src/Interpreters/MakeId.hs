@@ -5,13 +5,13 @@ import Effectful
 import Effectful.Dispatch.Dynamic (interpret)
 import Effects.MakeId (MakeId (..))
 import Effects.MakeMyUUID (MakeMyUUID)
-import Id (Id (..))
-import Id qualified
-import MyUUID (MyUUID (MyUUID))
+import Id (newId)
+import Model.Id (Id (..))
+import Model.MyUUID (MyUUID (..))
 
 runMakeIdIO :: (MakeMyUUID :> es) => Eff (MakeId : es) a -> Eff es a
 runMakeIdIO = interpret \_ -> \case
-  Generate -> Id.newId
+  Generate -> newId
 
 runMakeIdPure :: Eff (MakeId : es) a -> Eff es a
 runMakeIdPure = interpret \_ -> \case

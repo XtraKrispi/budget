@@ -1,6 +1,9 @@
 module Interpreters.ResetPasswordStore where
 
 import AppError
+import Control.Monad.Random (MonadRandom (..))
+import Data.Password.Argon2 qualified as Argon2
+import Data.Text (pack)
 import Db.User qualified as UserDb
 import Effectful
 import Effectful.Dispatch.Dynamic (interpret, reinterpret)
@@ -9,12 +12,18 @@ import Effectful.Reader.Static (Reader)
 import Effectful.State.Static.Local (evalState, get, modify)
 import Effects.ResetPasswordStore (ResetPasswordStore (..))
 import Environment (Environment)
-import Model (Email (unEmail), ExpirationTime (..), Hashed, Password (..), Token (..), User (..))
-import ResetPassword qualified
+import Model.Common
+import Model.Email
+import Model.Password
+import Model.Token
+import Model.User (User (..))
 
 runResetPasswordStoreSqlite :: (IOE :> es, Reader Environment :> es, Error AppError :> es) => Eff (ResetPasswordStore : es) a -> Eff es a
 runResetPasswordStoreSqlite = interpret \_ -> \case
-  GenerateToken -> liftIO ResetPassword.generateToken
+  GenerateToken -> liftIO do
+    str <- pack . take 64 <$> getRandomRs ('=', 'z')
+    hashed <- Token . Argon2.unPasswordHash <$> Argon2.hashPassword (Argon2.mkPassword str)
+    pure (Token str, hashed)
   InsertToken email (ExpirationTime ex) token -> do
     results <- UserDb.insertResetToken email token ex
     case results of

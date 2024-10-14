@@ -1,17 +1,11 @@
 module ResetPassword where
 
-import Control.Monad.Random (MonadRandom (getRandomRs))
 import Data.Foldable (find)
 import Data.Password.Argon2 qualified as Argon2
-import Data.Text (pack)
 import Data.Time (UTCTime)
-import Model (ExpirationTime (..), Hashed, PlainText, Token (..), User)
-
-generateToken :: IO (Token PlainText, Token Hashed)
-generateToken = do
-  str <- pack . take 64 <$> getRandomRs ('=', 'z')
-  hashed <- Token . Argon2.unPasswordHash <$> Argon2.hashPassword (Argon2.mkPassword str)
-  pure (Token str, hashed)
+import Model.Common (ExpirationTime (..), Hashed, PlainText)
+import Model.Token (Token (..))
+import Model.User (User)
 
 validateToken :: Token Hashed -> Token PlainText -> Bool
 validateToken (Token hashed) (Token plainText) =

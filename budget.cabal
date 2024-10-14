@@ -21,9 +21,7 @@ extra-source-files:
 executable budget
   main-is: Main.hs
   other-modules:
-      App
       AppError
-      Auth
       Db
       Db.Archive
       Db.Definition
@@ -46,6 +44,7 @@ executable budget
       Environment
       Handlers
       Handlers.Archive
+      Handlers.Auth
       Handlers.Definition
       Handlers.Home
       Handlers.Login
@@ -76,8 +75,17 @@ executable budget
       Interpreters.SessionStore
       Interpreters.Time
       Interpreters.UserStore
-      Model
-      MyUUID
+      Model.Archive
+      Model.Common
+      Model.Definition
+      Model.Email
+      Model.Id
+      Model.Item
+      Model.MyUUID
+      Model.Password
+      Model.Scratch
+      Model.Token
+      Model.User
       Password
       ResetPassword
       Svg

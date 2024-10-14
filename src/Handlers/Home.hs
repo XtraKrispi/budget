@@ -14,7 +14,11 @@ import Handlers.Model
 import Handlers.Utils (getParam, htmlResponse)
 import Html.Home qualified as Home
 import Htmx.Request (isBoosted, isHtmx)
-import Model
+import Model.Archive
+import Model.Definition
+import Model.Item
+import Model.Scratch
+import Model.User
 
 getHome ::
   ( DefinitionStore :> es
@@ -44,7 +48,7 @@ postHome ::
   User ->
   Eff es Response
 postHome request user = do
-  endDate <- unMyDay <$> getParam request "end-date"
+  endDate <- getParam request "end-date"
   amountInBank <- getParam request "amount-in-bank"
   amountLeftOver <- getParam request "amount-left-over"
 

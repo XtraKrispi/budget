@@ -15,7 +15,8 @@ import Effectful.Reader.Static (Reader)
 import Effectful.State.Static.Local (evalState, gets, modify)
 import Effects.DefinitionStore
 import Environment
-import Model
+import Model.Definition
+import Model.Email
 
 runDefinitionStoreSqlite ::
   ( IOE :> es

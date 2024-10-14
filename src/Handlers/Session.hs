@@ -1,10 +1,10 @@
 module Handlers.Session where
 
-import Auth qualified
 import Effectful
 import Effectful.Reader.Static (Reader)
 import Effects.SessionStore
 import Environment (Environment)
+import Handlers.Auth qualified as Auth
 import Handlers.Model
 import Handlers.Utils (makeResponse)
 

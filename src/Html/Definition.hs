@@ -9,9 +9,10 @@ import Data.Time.Format.ISO8601 (ISO8601 (..), formatShow)
 import Html.Common (withLayout)
 import Html.Dialog qualified as Dialog
 import Htmx.Attributes (hxGet, hxPost, hxSwap, hxTarget, hxTrigger, hyper_)
-import Id
 import Lucid
-import Model (Definition (..), Frequency (..), User)
+import Model.Definition
+import Model.Id
+import Model.User
 import Svg (d_, fill_, path_, strokeLinecap_, strokeLinejoin_, strokeWidth_, stroke_, viewBox_)
 import Text.RawString.QQ
 
@@ -86,7 +87,7 @@ definitions defs =
   renderDefinitionRow definition =
     tr_
       [ class_ "hover cursor-pointer"
-      , hxGet ("/admin/definitions/" <> Id.toText definition.definitionId)
+      , hxGet ("/admin/definitions/" <> Model.Id.toText definition.definitionId)
       , hxTarget "#definition_modal"
       , hxSwap "outerHTML"
       ]
@@ -113,13 +114,13 @@ definitionsModal mDef = do
           h3_ [class_ "font-bold text-lg"] "Edit Definition"
           form_
             [ class_ "flex flex-col space-y-2"
-            , hxPost ("/admin/definitions/" <> Id.toText def.definitionId)
+            , hxPost ("/admin/definitions/" <> Model.Id.toText def.definitionId)
             ]
             do
               input_
                 [ type_ "hidden"
                 , name_ "id"
-                , value_ (Id.toText def.definitionId)
+                , value_ (Model.Id.toText def.definitionId)
                 ]
               label_ [class_ "form-control w-full max-w-xs"] do
                 input_

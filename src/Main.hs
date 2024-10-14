@@ -1,7 +1,6 @@
 module Main (main) where
 
 import AppError
-import Auth (requiresAuth)
 import Configuration.Dotenv qualified as Dotenv
 import Data.Function ((&))
 import Data.Text (pack)
@@ -27,6 +26,7 @@ import Environment (
  )
 import GHC.IO.StdHandles (stderr)
 import Handlers qualified
+import Handlers.Auth (requiresAuth)
 import Handlers.Model
 import Handlers.Utils (errorResponse, makeResponse)
 import Interpreters.ArchiveStore (runArchiveStoreSqlite)
@@ -40,7 +40,7 @@ import Interpreters.ScratchStore (runScratchStoreSqlite)
 import Interpreters.SessionStore (runSessionStoreSqlite)
 import Interpreters.Time (runTimeIO)
 import Interpreters.UserStore (runUserStoreSqlite)
-import Model (ArchiveAction (..))
+import Model.Archive (ArchiveAction (..))
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
 import System.Envy (decodeEnv)

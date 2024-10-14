@@ -4,7 +4,8 @@ import Data.Text (Text)
 import Html.Common (classList, withPageShell)
 import Htmx.Attributes (hxPost, hxSwap, hxSwapOob, hxTarget, hxTrigger, hxValidate)
 import Lucid
-import Model
+import Model.Common
+import Model.Token
 import Network.URI.Encode (encodeText)
 
 landingPage :: Html ()

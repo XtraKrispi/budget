@@ -9,7 +9,8 @@ import Effectful (Eff, IOE, (:>))
 import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
-import Model
+import Model.Archive
+import Model.Email
 import Text.RawString.QQ (r)
 
 getAllArchive ::

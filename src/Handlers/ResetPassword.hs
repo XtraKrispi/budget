@@ -20,17 +20,13 @@ import Environment (
  )
 import Handlers.Model
 import Handlers.Utils
-import Html.Common (addToast)
+import Html.Common (AlertType (..), addToast)
 import Html.ResetPassword qualified as ResetPassword
 import Lucid (button_, class_, disabled_, id_, span_, type_)
-import Model (
-  AlertType (..),
-  ExpirationTime (..),
-  Password,
-  PlainText,
-  Token (Token),
-  User (..),
- )
+import Model.Common
+import Model.Password
+import Model.Token
+import Model.User (User (..))
 import Network.URI.Encode (encodeText)
 import ResetPassword qualified
 

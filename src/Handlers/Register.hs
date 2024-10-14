@@ -9,11 +9,13 @@ import Effects.HashPassword
 import Effects.UserStore
 import Handlers.Model
 import Handlers.Utils
-import Html.Common (addToast)
+import Html.Common (AlertType (..), addToast)
 import Html.Login qualified as Login
 import Htmx.Attributes
 import Lucid
-import Model
+import Model.Common
+import Model.Password
+import Model.User
 
 postRegister ::
   ( UserStore :> es

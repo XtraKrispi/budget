@@ -6,7 +6,8 @@ import Data.Time.Format.ISO8601 (ISO8601 (..), formatShow)
 import Html.Common (withLayout)
 import Htmx.Attributes (hxGet, hxSwap, hxTrigger)
 import Lucid
-import Model (ArchiveAction (..), ArchivedItem (..), User)
+import Model.Archive
+import Model.User
 
 archivePage :: User -> Html ()
 archivePage user = withLayout user $ div_ [class_ "px-20 py-10"] do

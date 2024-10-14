@@ -15,12 +15,9 @@ import Environment (Environment (envAuthCookieName))
 import Handlers.Model
 import Handlers.Utils (errorResponse, getParam, htmlResponse, makeResponse)
 import Html.Login qualified as Login
-import Model (
-  ExpirationTime (..),
-  SessionId (unSessionId),
-  User (..),
- )
-import MyUUID qualified
+import Model.Common (ExpirationTime (..), SessionId (unSessionId))
+import Model.MyUUID qualified as MyUUID
+import Model.User (User (..))
 import Password qualified
 
 getLogin :: Eff es Response

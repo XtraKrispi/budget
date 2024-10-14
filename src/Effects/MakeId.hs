@@ -6,7 +6,7 @@ module Effects.MakeId where
 
 import Effectful (Effect)
 import Effectful.TH (makeEffect)
-import Id (Id)
+import Model.Id
 
 data MakeId :: Effect where
   Generate :: MakeId m (Id a)

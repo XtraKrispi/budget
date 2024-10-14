@@ -11,7 +11,8 @@ import Effectful.Reader.Static (Reader)
 import Effectful.State.Static.Local
 import Effects.ScratchStore
 import Environment
-import Model
+import Model.Email
+import Model.Scratch
 
 runScratchStoreSqlite ::
   ( Reader Environment :> es

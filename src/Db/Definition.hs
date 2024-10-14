@@ -11,8 +11,9 @@ import Effectful
 import Effectful.Error.Static
 import Effectful.Reader.Static (Reader)
 import Environment
-import Id
-import Model
+import Model.Definition
+import Model.Email
+import Model.Id
 import Text.RawString.QQ
 
 getAllDefinitions ::
