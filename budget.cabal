@@ -18,9 +18,9 @@ extra-source-files:
     README.md
     CHANGELOG.md
 
-executable budget
-  main-is: Main.hs
-  other-modules:
+library
+  exposed-modules:
+      App
       AppError
       Db
       Db.Archive
@@ -41,6 +41,7 @@ executable budget
       Effects.SessionStore
       Effects.Time
       Effects.UserStore
+      Effects.WebServer
       Environment
       Handlers
       Handlers.Archive
@@ -75,6 +76,7 @@ executable budget
       Interpreters.SessionStore
       Interpreters.Time
       Interpreters.UserStore
+      Interpreters.WebServer
       Model.Archive
       Model.Common
       Model.Definition
@@ -90,11 +92,12 @@ executable budget
       ResetPassword
       Svg
       Web.Scotty.ActionT
+  other-modules:
       Paths_budget
   autogen-modules:
       Paths_budget
   hs-source-dirs:
-      src
+      lib
   default-extensions:
       OverloadedStrings
       BlockArguments
@@ -137,4 +140,118 @@ executable budget
     , wai
     , wai-extra
     , wai-middleware-static
+    , warp
+  default-language: GHC2021
+
+executable budget-exe
+  main-is: Main.hs
+  other-modules:
+      Paths_budget
+  autogen-modules:
+      Paths_budget
+  hs-source-dirs:
+      app
+  default-extensions:
+      OverloadedStrings
+      BlockArguments
+      OverloadedRecordDot
+      LambdaCase
+      GADTs
+      TypeFamilies
+      DataKinds
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      MonadRandom
+    , aeson
+    , base >=4.7 && <5
+    , budget
+    , containers
+    , data-default
+    , dotenv
+    , effectful
+    , effectful-core
+    , effectful-th
+    , envy
+    , exceptions
+    , format-numbers
+    , http-types
+    , lens
+    , lucid2
+    , mime-mail
+    , monad-logger
+    , mtl
+    , password
+    , raw-strings-qq
+    , scotty
+    , smtp-mail
+    , sqlite-simple
+    , text
+    , time
+    , transformers
+    , unliftio-core
+    , uri-encode
+    , uuid
+    , wai
+    , wai-extra
+    , wai-middleware-static
+    , warp
+  default-language: GHC2021
+
+test-suite budget-test
+  type: exitcode-stdio-1.0
+  main-is: Spec.hs
+  other-modules:
+      Paths_budget
+  autogen-modules:
+      Paths_budget
+  hs-source-dirs:
+      test
+  default-extensions:
+      OverloadedStrings
+      BlockArguments
+      OverloadedRecordDot
+      LambdaCase
+      GADTs
+      TypeFamilies
+      DataKinds
+  ghc-options: -Wall -Wcompat -Widentities -Wincomplete-record-updates -Wincomplete-uni-patterns -Wmissing-home-modules -Wpartial-fields -Wredundant-constraints
+  build-depends:
+      HUnit
+    , MonadRandom
+    , QuickCheck
+    , aeson
+    , base >=4.7 && <5
+    , budget
+    , containers
+    , data-default
+    , dotenv
+    , effectful
+    , effectful-core
+    , effectful-th
+    , envy
+    , exceptions
+    , format-numbers
+    , hspec
+    , hspec-contrib
+    , http-types
+    , lens
+    , lucid2
+    , mime-mail
+    , monad-logger
+    , mtl
+    , password
+    , raw-strings-qq
+    , scotty
+    , smtp-mail
+    , sqlite-simple
+    , text
+    , time
+    , transformers
+    , unliftio-core
+    , uri-encode
+    , uuid
+    , wai
+    , wai-extra
+    , wai-middleware-static
+    , warp
   default-language: GHC2021

@@ -1,0 +1,10 @@
+cradle:
+  stack:
+    - path: "./lib"
+      component: "budget:lib"
+
+    - path: "./app/Main.hs"
+      component: "budget:exe:budget-exe"
+
+    - path: "./test"
+      component: "budget:test:budget-test"

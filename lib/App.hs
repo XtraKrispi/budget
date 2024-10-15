@@ -1,13 +1,9 @@
-module Main (main) where
+module App where
 
 import AppError
-import Configuration.Dotenv qualified as Dotenv
 import Data.Function ((&))
-import Data.Text (pack)
-import Data.Text.IO qualified as TIO
-import Db.Init qualified as InitDb
 import Effectful
-import Effectful.Error.Static (Error, runError)
+import Effectful.Error.Static (CallStack, Error, runError)
 import Effectful.Reader.Static (Reader, runReader)
 import Effects.ArchiveStore (ArchiveStore)
 import Effects.DefinitionStore (DefinitionStore)
@@ -24,7 +20,6 @@ import Environment (
   Env (Dev),
   Environment (envAppEnvironment),
  )
-import GHC.IO.StdHandles (stderr)
 import Handlers qualified
 import Handlers.Auth (requiresAuth)
 import Handlers.Model
@@ -43,28 +38,47 @@ import Interpreters.UserStore (runUserStoreSqlite)
 import Model.Archive (ArchiveAction (..))
 import Network.Wai.Middleware.RequestLogger (logStdout, logStdoutDev)
 import Network.Wai.Middleware.Static (addBase, staticPolicy)
-import System.Envy (decodeEnv)
-import System.IO (hPutStrLn)
-import Web.Scotty (ScottyM, scotty)
+import Web.Scotty (ScottyM)
 import Web.Scotty.ActionT (runHandler)
 import Web.Scotty.Trans
 
-main :: IO ()
-main = do
-  Dotenv.onMissingFile (Dotenv.loadFile Dotenv.defaultConfig) (pure ())
-  eEnvironment <- decodeEnv
-  case eEnvironment of
-    Left err -> do
-      hPutStrLn stderr "Cannot start application, environment variables not set!"
-      hPutStrLn stderr err
-    Right environment -> do
-      results <- runEff $ runReader environment $ runError @AppError InitDb.initialize
-      case results of
-        Left (_callstack, err) -> TIO.putStrLn $ "There was a problem initializing the database: " <> pack (show err)
-        Right _ -> pure ()
-      scotty
-        8080
-        (appMiddleware environment >> webapp environment)
+runEffects ::
+  (Reader Environment :> [Reader r, Error AppError, IOE]) =>
+  r ->
+  Eff
+    [ ArchiveStore
+    , DefinitionStore
+    , ResetPasswordStore
+    , ScratchStore
+    , SessionStore
+    , UserStore
+    , HashPassword
+    , Time
+    , Mail
+    , MakeId
+    , MakeMyUUID
+    , Reader r
+    , Error AppError
+    , IOE
+    ]
+    a ->
+  IO (Either (CallStack, AppError) a)
+runEffects env program =
+  program
+    & runArchiveStoreSqlite
+    & runDefinitionStoreSqlite
+    & runResetPasswordStoreSqlite
+    & runScratchStoreSqlite
+    & runSessionStoreSqlite
+    & runUserStoreSqlite
+    & runHashPasswordIO
+    & runTimeIO
+    & runMailIO
+    & runMakeIdIO
+    & runMakeMyUUIDIO
+    & runReader env
+    & runError @AppError
+    & runEff
 
 runProgram ::
   (Reader Environment :> [Reader r, Error AppError, IOE]) =>
@@ -88,22 +102,7 @@ runProgram ::
     Response ->
   IO Response
 runProgram env program = do
-  results <-
-    program
-      & runArchiveStoreSqlite
-      & runDefinitionStoreSqlite
-      & runResetPasswordStoreSqlite
-      & runScratchStoreSqlite
-      & runSessionStoreSqlite
-      & runUserStoreSqlite
-      & runHashPasswordIO
-      & runTimeIO
-      & runMailIO
-      & runMakeIdIO
-      & runMakeMyUUIDIO
-      & runReader env
-      & runError @AppError
-      & runEff
+  results <- runEffects env program
   case results of
     Left _err ->
       pure $ errorResponse "An unknown error has occurred, please try again."
@@ -125,7 +124,6 @@ webapp env = do
   get "/login" $ runHandler (runProgram env) $ const Handlers.getLogin
   post "/login" $ runHandler (runProgram env) Handlers.postLogin
   get "/toast/clear" $ runHandler (runProgram env) (const $ pure $ makeResponse [] [] mempty)
-
   post "/register" $ runHandler (runProgram env) Handlers.postRegister
   post "/register/validate" $ runHandler (runProgram env) Handlers.postRegisterValidate
   get "/reset-password" $ runHandler (runProgram env) $ const Handlers.getResetPassword
