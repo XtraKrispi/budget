@@ -1,4 +1,4 @@
-module Handlers.Home (getHome, postHome) where
+module Handlers.Home where
 
 import AppError (AppError)
 import Data.List (sortOn)
