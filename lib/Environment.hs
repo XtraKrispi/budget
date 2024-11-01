@@ -41,10 +41,20 @@ instance DefConfig DbPath where
 
 instance FromEnv DbPath where
   fromEnv :: Maybe DbPath -> Parser DbPath
-  fromEnv mUrl =
-    flip fromMaybe mUrl . DbPath
+  fromEnv mPath =
+    flip fromMaybe mPath . DbPath
       <$> envMaybe "BUDGET_DB_PATH"
         .!= "budget.db"
+
+newtype AppPort = AppPort {unAppPort :: Int}
+  deriving (Generic, Show)
+
+instance FromEnv AppPort where
+  fromEnv :: Maybe AppPort -> Parser AppPort
+  fromEnv mPort =
+    flip fromMaybe mPort . AppPort
+      <$> envMaybe "BUDGET_APP_PORT"
+        .!= 8000
 
 data Env = Dev | Prod
   deriving (Show, Eq)
@@ -71,6 +81,7 @@ data Environment = Environment
   , envSmtp :: !Smtp
   , envBaseUrl :: !BaseUrl
   , envAppEnvironment :: !Env
+  , envAppPort :: AppPort
   }
   deriving (Generic, Show)
 
@@ -82,6 +93,7 @@ instance FromEnv Environment where
       <*> fromEnv (envSmtp <$> mEnv)
       <*> fromEnv (envBaseUrl <$> mEnv)
       <*> fromEnv (envAppEnvironment <$> mEnv)
+      <*> fromEnv (envAppPort <$> mEnv)
 
 class HasSmtp env where
   smtp :: env -> Smtp
@@ -97,6 +109,9 @@ class HasBaseUrl env where
 
 class HasAuthCookieName env where
   authCookieName :: env -> Text
+
+class HasPort env where
+  port :: env -> AppPort
 
 instance HasSmtp Environment where
   smtp :: Environment -> Smtp
@@ -117,3 +132,7 @@ instance HasBaseUrl Environment where
 instance HasAuthCookieName Environment where
   authCookieName :: Environment -> Text
   authCookieName = envAuthCookieName
+
+instance HasPort Environment where
+  port :: Environment -> AppPort
+  port = envAppPort
