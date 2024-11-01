@@ -39,6 +39,13 @@ instance DefConfig DbPath where
   defConfig :: DbPath
   defConfig = DbPath "budget.db"
 
+instance FromEnv DbPath where
+  fromEnv :: Maybe DbPath -> Parser DbPath
+  fromEnv mUrl =
+    flip fromMaybe mUrl . DbPath
+      <$> envMaybe "BUDGET_DB_PATH"
+        .!= "budget.db"
+
 data Env = Dev | Prod
   deriving (Show, Eq)
 
@@ -50,7 +57,7 @@ instance FromEnv Env where
       Nothing ->
         do
           var :: Maybe Text <- envMaybe "BUDGET_ENVIRONMENT"
-          case var of
+          case fmap toLower var of
             Just "prod" -> pure Prod
             _ -> pure Dev
 
@@ -59,8 +66,8 @@ instance DefConfig Env where
   defConfig = Dev
 
 data Environment = Environment
-  { envDbPath :: !DbPath
-  , envAuthCookieName :: !Text
+  { envAuthCookieName :: !Text
+  , envDbPath :: !DbPath
   , envSmtp :: !Smtp
   , envBaseUrl :: !BaseUrl
   , envAppEnvironment :: !Env
@@ -69,7 +76,12 @@ data Environment = Environment
 
 instance FromEnv Environment where
   fromEnv :: Maybe Environment -> Parser Environment
-  fromEnv mEnv = Environment defConfig "AUTH_COOKIE" <$> fromEnv (envSmtp <$> mEnv) <*> fromEnv (envBaseUrl <$> mEnv) <*> fromEnv (envAppEnvironment <$> mEnv)
+  fromEnv mEnv =
+    Environment "AUTH_COOKIE"
+      <$> fromEnv (envDbPath <$> mEnv)
+      <*> fromEnv (envSmtp <$> mEnv)
+      <*> fromEnv (envBaseUrl <$> mEnv)
+      <*> fromEnv (envAppEnvironment <$> mEnv)
 
 class HasSmtp env where
   smtp :: env -> Smtp
