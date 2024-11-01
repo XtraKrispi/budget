@@ -2,15 +2,15 @@ module Main (main) where
 
 import App
 import Configuration.Dotenv qualified as Dotenv
-import System.Envy (decodeEnv)
-import System.IO (hPutStrLn, stderr)
+import Data.Text (pack)
 import Data.Text.IO qualified as TIO
 import Db.Init qualified as InitDb
-import Data.Text (pack)
-import Web.Scotty
 import Effectful
-import Interpreters.WebServer 
 import Effects.WebServer
+import Interpreters.WebServer
+import System.Envy (decodeEnv)
+import System.IO (hPutStrLn, stderr)
+import Web.Scotty
 
 main :: IO ()
 main = do
@@ -26,4 +26,4 @@ main = do
         Left (_callstack, err) -> TIO.putStrLn $ "There was a problem initializing the database: " <> pack (show err)
         Right _ -> pure ()
       app <- scottyApp (appMiddleware environment >> webapp environment)
-      runEff $ runWebServerWarp (serve 8080 app)
+      runEff $ runWebServerWarp (serve 8000 app)
