@@ -21,6 +21,10 @@ runHandler runProgram handler = do
   formParams <- fmap (bimap toStrict toStrict) <$> Web.Scotty.formParams
   queryParams <- fmap (bimap toStrict toStrict) <$> Web.Scotty.queryParams
 
+  liftIO do
+    putStrLn "Headers:"
+    print headers
+
   reqCookies <- Web.Scotty.Cookie.getCookies
 
   response <- liftIO $ runProgram $ handler $ Request reqCookies headers (formParams ++ queryParams ++ urlParams)
