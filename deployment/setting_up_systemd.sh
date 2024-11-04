@@ -8,7 +8,7 @@
 sudo cp budget.service /etc/systemd/system/budget.service
 sudo chmod 640 /etc/systemd/system/budget.service
 
-sudo make -f ../Makefile deploy
+# sudo make -f ../Makefile deploy
 
 sudo systemctl daemon-reload
 sudo systemctl enable budget

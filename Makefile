@@ -2,6 +2,7 @@ build:
 	stack build
 
 install:
+	sudo chmod a+x deployment/setting_up_systemd.sh
 	./deployment/setting_up_systemd.sh
 
 deploy:
