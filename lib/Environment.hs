@@ -56,6 +56,15 @@ instance FromEnv AppPort where
       <$> envMaybe "BUDGET_APP_PORT"
         .!= 8000
 
+newtype AppStaticDirectory = AppStaticDirectory {unAppStaticDirectory :: Text}
+  deriving (Generic, Show)
+
+instance FromEnv AppStaticDirectory where
+  fromEnv :: Maybe AppStaticDirectory -> Parser AppStaticDirectory
+  fromEnv mDir =
+    flip fromMaybe mDir . AppStaticDirectory
+      <$> envMaybe "BUDGET_APP_STATIC_DIR" .!= "public"
+
 data Env = Dev | Prod
   deriving (Show, Eq)
 
@@ -82,6 +91,7 @@ data Environment = Environment
   , envBaseUrl :: !BaseUrl
   , envAppEnvironment :: !Env
   , envAppPort :: AppPort
+  , envAppStaticDirectory :: AppStaticDirectory
   }
   deriving (Generic, Show)
 
@@ -94,6 +104,7 @@ instance FromEnv Environment where
       <*> fromEnv (envBaseUrl <$> mEnv)
       <*> fromEnv (envAppEnvironment <$> mEnv)
       <*> fromEnv (envAppPort <$> mEnv)
+      <*> fromEnv (envAppStaticDirectory <$> mEnv)
 
 class HasSmtp env where
   smtp :: env -> Smtp
@@ -112,6 +123,9 @@ class HasAuthCookieName env where
 
 class HasPort env where
   port :: env -> AppPort
+
+class HasAppStaticDirectory env where
+  staticDirectory :: env -> AppStaticDirectory
 
 instance HasSmtp Environment where
   smtp :: Environment -> Smtp
@@ -136,3 +150,7 @@ instance HasAuthCookieName Environment where
 instance HasPort Environment where
   port :: Environment -> AppPort
   port = envAppPort
+
+instance HasAppStaticDirectory Environment where
+  staticDirectory :: Environment -> AppStaticDirectory
+  staticDirectory = envAppStaticDirectory

@@ -2,6 +2,7 @@ module App where
 
 import AppError
 import Data.Function ((&))
+import Data.Text (unpack)
 import Effectful
 import Effectful.Error.Static (CallStack, Error, runError)
 import Effectful.Reader.Static (Reader, runReader)
@@ -17,8 +18,9 @@ import Effects.SessionStore (SessionStore)
 import Effects.Time (Time)
 import Effects.UserStore (UserStore)
 import Environment (
+  AppStaticDirectory (unAppStaticDirectory),
   Env (Dev),
-  Environment (envAppEnvironment),
+  Environment (..),
  )
 import Handlers qualified
 import Handlers.Auth (requiresAuth)
@@ -110,7 +112,7 @@ runProgram env program = do
 
 appMiddleware :: Environment -> ScottyT m ()
 appMiddleware environment = do
-  middleware $ staticPolicy (addBase "/home/xtrakrispi/webapps/public")
+  middleware $ staticPolicy $ addBase (unpack $ unAppStaticDirectory environment.envAppStaticDirectory)
   middleware $
     if environment.envAppEnvironment == Dev
       then logStdoutDev
