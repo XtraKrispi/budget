@@ -1,13 +1,14 @@
 #! /bin/bash
 # https://www.howtogeek.com/687970/how-to-run-a-linux-program-at-startup-with-systemd/
 
-sudo make -f ../Makefile deploy
 
 # Check to make sure the service name isn't used
 # sudo systemctl list-unit-files --type-service
 
 sudo cp budget.service /etc/systemd/system/budget.service
 sudo chmod 640 /etc/systemd/system/budget.service
+
+sudo make -f ../Makefile deploy
 
 sudo systemctl daemon-reload
 sudo systemctl enable budget
