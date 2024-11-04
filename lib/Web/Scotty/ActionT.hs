@@ -9,6 +9,7 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Lazy (fromStrict, toStrict)
 import Effectful
 import Handlers.Model
+import Htmx.Request (isBoosted, isHtmx)
 import Lucid
 import Web.Scotty (ActionM)
 import Web.Scotty qualified
@@ -22,8 +23,15 @@ runHandler runProgram handler = do
   queryParams <- fmap (bimap toStrict toStrict) <$> Web.Scotty.queryParams
 
   reqCookies <- Web.Scotty.Cookie.getCookies
-
-  response <- liftIO $ runProgram $ handler $ Request reqCookies headers (formParams ++ queryParams ++ urlParams)
+  let request = Request reqCookies headers (formParams ++ queryParams ++ urlParams)
+  liftIO do
+    putStrLn "Headers:"
+    print headers
+    putStrLn "Is HTMX:"
+    print $ isHtmx request
+    putStrLn "Is Boosted:"
+    print $ isBoosted request
+  response <- liftIO $ runProgram $ handler request
   case response of
     SamePage (SamePageResponse hs cookies content) -> do
       traverse_ (uncurry (Web.Scotty.setHeader `on` fromStrict)) hs
