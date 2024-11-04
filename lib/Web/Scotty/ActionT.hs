@@ -9,7 +9,6 @@ import Data.Text.Encoding (encodeUtf8)
 import Data.Text.Lazy (fromStrict, toStrict)
 import Effectful
 import Handlers.Model
-import Htmx.Request (isBoosted, isHtmx)
 import Lucid
 import Web.Scotty (ActionM)
 import Web.Scotty qualified

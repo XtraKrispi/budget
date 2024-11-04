@@ -12,7 +12,7 @@ withPageShell content =
   doctypehtml_ do
     head_ do
       title_ "Budget"
-      link_ [rel_ "stylesheet", href_ "/output.css"]
+      link_ [rel_ "stylesheet", href_ "output.css"]
       script_ [src_ "https://unpkg.com/htmx.org@2.0.2"] ("" :: Text)
       script_ [src_ "https://unpkg.com/hyperscript.org@0.9.12"] ("" :: Text)
     body_ [class_ "w-screen"] do
