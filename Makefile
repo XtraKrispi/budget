@@ -6,7 +6,7 @@ deploy:
 	stack install --local-bin-path bin
 	sudo systemctl kill budget
 	cp bin/budget-exe ../webapps/budget
-	cp output.css ../webapps/budget/public/output.css
+	cp output.css ../webapps/budget/public/
 	sudo systemctl start budget
 
 backup:
