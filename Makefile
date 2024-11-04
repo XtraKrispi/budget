@@ -1,14 +1,12 @@
 build:
 	stack build
-
-install:
-	sudo chmod a+x deployment/setting_up_systemd.sh
-	./deployment/setting_up_systemd.sh
+	npm run tailwind:prod
 
 deploy:
 	stack install --local-bin-path bin
-	cp bin/budget-exe ../webapps/budget
 	sudo systemctl kill budget
+	cp bin/budget-exe ../webapps/budget
+	cp output.css ../webapps/budget/public/output.css
 	sudo systemctl start budget
 
 backup:
