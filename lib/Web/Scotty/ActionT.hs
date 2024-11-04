@@ -24,13 +24,6 @@ runHandler runProgram handler = do
 
   reqCookies <- Web.Scotty.Cookie.getCookies
   let request = Request reqCookies headers (formParams ++ queryParams ++ urlParams)
-  liftIO do
-    putStrLn "Headers:"
-    print headers
-    putStrLn "Is HTMX:"
-    print $ isHtmx request
-    putStrLn "Is Boosted:"
-    print $ isBoosted request
   response <- liftIO $ runProgram $ handler request
   case response of
     SamePage (SamePageResponse hs cookies content) -> do
