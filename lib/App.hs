@@ -110,7 +110,7 @@ runProgram env program = do
 
 appMiddleware :: Environment -> ScottyT m ()
 appMiddleware environment = do
-  middleware $ staticPolicy (addBase "public")
+  middleware $ staticPolicy (addBase "/home/xtrakrispi/webapps/public")
   middleware $
     if environment.envAppEnvironment == Dev
       then logStdoutDev
