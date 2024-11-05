@@ -1,6 +1,7 @@
 module Handlers.Definition where
 
 import AppError (AppError)
+import Debug.Trace (trace)
 import Effectful
 import Effectful.Error.Static
 import Effects.DefinitionStore
@@ -87,6 +88,7 @@ postDefinitionEdit request user = do
           definitionStartDate
           definitionEndDate
           definitionIsAutomaticWithdrawal
+  trace (show definition) (pure ())
 
   Effect.DefinitionStore.save user.email definition
   pure $ headerResponse "HX-Trigger" "hideDefinitionsModal, reload"

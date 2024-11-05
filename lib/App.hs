@@ -112,7 +112,7 @@ runProgram env program = do
 
 appMiddleware :: Environment -> ScottyT m ()
 appMiddleware environment = do
-  middleware $ staticPolicy $ addBase (unpack $ unAppStaticDirectory environment.envAppStaticDirectory)
+  middleware $ staticPolicy $ addBase $ unpack $ unAppStaticDirectory environment.envAppStaticDirectory
   middleware $
     if environment.envAppEnvironment == Dev
       then logStdoutDev

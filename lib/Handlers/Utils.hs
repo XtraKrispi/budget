@@ -22,6 +22,7 @@ getParam request name =
 getParamMaybe :: (Parse a, Error AppError :> es) => Request -> Text -> Eff es (Maybe a)
 getParamMaybe request name =
   case find (\(n, _) -> n == name) request.requestParams of
+    Just (_, "") -> pure Nothing
     Just (_, param) ->
       case parse param of
         Just val -> pure $ Just val
