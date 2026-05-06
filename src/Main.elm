@@ -6,10 +6,16 @@ import HomePage
 import Html exposing (..)
 import LoginPage
 import Navbar
-import Ports.Auth as Auth exposing (SessionInfo, initiateGetUser)
+import Ports.Auth as Auth exposing (initiateGetUser, loggedOut, logout)
 import Route exposing (Route(..), routeParser)
+import Types exposing (SessionInfo)
 import Url
 import Url.Parser
+
+
+
+--TODO: There is a bug where logging in causes infinite rendering...
+-- this does not trigger additional Cmds in Elm though
 
 
 main : Program () Model Msg
@@ -101,6 +107,8 @@ type Msg
     | LoginPageMsg LoginPage.Msg
     | HomePageMsg HomePage.Msg
     | GotUser (Maybe SessionInfo)
+    | Logout
+    | LoggedOut
 
 
 getKeyAndSession : Model -> ( Nav.Key, Maybe SessionInfo )
@@ -187,23 +195,32 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        Logout ->
+            ( model, Cmd.batch [ logout () ] )
+
+        LoggedOut ->
+            ( model, Nav.load "/" )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
-    case model of
-        Initializing _ ->
-            Auth.gotUser GotUser
+    Sub.batch
+        [ loggedOut (\_ -> LoggedOut)
+        , case model of
+            Initializing _ ->
+                Auth.gotUser GotUser
 
-        Initialized appModel ->
-            case appModel.page of
-                LoginPage mdl ->
-                    Sub.map LoginPageMsg (LoginPage.subscriptions mdl)
+            Initialized appModel ->
+                case appModel.page of
+                    LoginPage mdl ->
+                        Sub.map LoginPageMsg (LoginPage.subscriptions mdl)
 
-                HomePage mdl ->
-                    Sub.map HomePageMsg (HomePage.subscriptions mdl)
+                    HomePage mdl ->
+                        Sub.map HomePageMsg (HomePage.subscriptions mdl)
 
-                NotFoundPage ->
-                    Sub.none
+                    NotFoundPage ->
+                        Sub.none
+        ]
 
 
 view : Model -> Browser.Document Msg
@@ -220,7 +237,7 @@ view model =
                         [ Html.map LoginPageMsg (LoginPage.view mdl) ]
 
                     HomePage mdl ->
-                        [ Navbar.navbar appModel.route, Html.map HomePageMsg (HomePage.view mdl) ]
+                        [ Navbar.navbar Logout appModel.route, Html.map HomePageMsg (HomePage.view mdl) ]
 
                     NotFoundPage ->
                         [ Html.div [] [] ]

@@ -4,10 +4,11 @@ import Browser.Navigation as Nav
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
-import Ports.Auth as Auth exposing (SessionInfo, signIn, signUp)
+import Ports.Auth as Auth exposing (signIn, signUp)
 import Ports.Dialog as Dialog
 import Svg
 import Svg.Attributes as SA
+import Types exposing (SessionInfo)
 
 
 type alias Model =

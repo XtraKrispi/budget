@@ -75,3 +75,8 @@ app.ports.fetchScratch.subscribe(async () => {
         }
     }
 });
+
+app.ports.logout.subscribe(async () => {
+    await supabase.auth.signOut();
+    app.ports.loggedOut.send({});
+});

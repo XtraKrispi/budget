@@ -3,6 +3,13 @@ module Types exposing (..)
 import Date exposing (Date)
 
 
+type alias SessionInfo =
+    { email : String
+    , userId : String
+    , confirmed : Bool
+    }
+
+
 type Frequency
     = OneTime
     | Weekly

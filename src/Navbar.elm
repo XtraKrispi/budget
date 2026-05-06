@@ -2,13 +2,14 @@ module Navbar exposing (navbar)
 
 import Html exposing (Html, a, button, div, li, text, ul)
 import Html.Attributes as Attr exposing (attribute, class, href, tabindex)
+import Html.Events as Events
 import Route exposing (Route(..), toUrl)
 import Svg
 import Svg.Attributes as SvgAttr
 
 
-navbar : Route -> Html msg
-navbar route =
+navbar : msg -> Route -> Html msg
+navbar onLogout route =
     div [ class "navbar bg-base-100" ]
         [ div [ class "navbar-start" ]
             [ div [ class "dropdown" ]
@@ -30,7 +31,7 @@ navbar route =
         , div [ class "navbar-end" ]
             [ ul [ class "menu menu-horizontal px-1" ]
                 [ li []
-                    [ button [ class "btn btn-ghost" ] [ text "Log Out" ]
+                    [ button [ class "btn btn-ghost", Events.onClick onLogout ] [ text "Log Out" ]
                     ]
                 ]
             ]
