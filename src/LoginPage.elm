@@ -1,9 +1,11 @@
 module LoginPage exposing (..)
 
 import Browser.Navigation as Nav
+import BusinessLogic exposing (sessionInfoDecoder)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
+import Json.Decode as Decode
 import Ports.Auth as Auth exposing (signIn, signUp)
 import Ports.Dialog as Dialog
 import Svg
@@ -35,11 +37,7 @@ init =
 type Msg
     = OpenDialog
     | SignUp
-    | SignUpSucceeded
-        { email : String
-        , userId : String
-        , confirmed : Bool
-        }
+    | SignUpSucceeded SessionInfo
     | SignUpFailed String
     | RegistrationEmailUpdated String
     | RegistrationPasswordUpdated String
@@ -96,12 +94,22 @@ update msg model =
             ( model, Cmd.none )
 
 
+decodeSessionInfo : (SessionInfo -> msg) -> (String -> msg) -> Decode.Value -> msg
+decodeSessionInfo msgSuccess msgFailure val =
+    case Decode.decodeValue sessionInfoDecoder val of
+        Ok sessionInfo ->
+            msgSuccess sessionInfo
+
+        Err _ ->
+            msgFailure "Failed to decode session info"
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.batch
-        [ Auth.onSignUpSuccess SignUpSucceeded
+        [ Auth.onSignUpSuccess (decodeSessionInfo SignUpSucceeded SignUpFailed)
         , Auth.onSignUpFailure SignUpFailed
-        , Auth.onLoginSuccess LoginSucceeded
+        , Auth.onLoginSuccess (decodeSessionInfo LoginSucceeded LoginFailed)
         , Auth.onLoginFailure LoginFailed
         ]
 

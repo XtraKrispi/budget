@@ -1,12 +1,12 @@
 port module Ports.Scratch exposing (..)
 
-import Types exposing (RawScratch)
+import Json.Decode as Decode
 
 
 port fetchScratch : () -> Cmd msg
 
 
-port fetchScratchSuccess : (Maybe RawScratch -> msg) -> Sub msg
+port fetchScratchSuccess : (Maybe Decode.Value -> msg) -> Sub msg
 
 
 port fetchScratchFailure : (String -> msg) -> Sub msg

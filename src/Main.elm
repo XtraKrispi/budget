@@ -2,8 +2,10 @@ module Main exposing (main)
 
 import Browser
 import Browser.Navigation as Nav
+import BusinessLogic exposing (sessionInfoDecoder)
 import HomePage
 import Html exposing (..)
+import Json.Decode as Decode
 import LoginPage
 import Navbar
 import Ports.Auth as Auth exposing (initiateGetUser, loggedOut, logout)
@@ -208,7 +210,20 @@ subscriptions model =
         [ loggedOut (\_ -> LoggedOut)
         , case model of
             Initializing _ ->
-                Auth.gotUser GotUser
+                Auth.gotUser
+                    (\mVal ->
+                        case mVal of
+                            Nothing ->
+                                GotUser Nothing
+
+                            Just val ->
+                                case Decode.decodeValue sessionInfoDecoder val of
+                                    Ok session ->
+                                        GotUser (Just session)
+
+                                    Err _ ->
+                                        GotUser Nothing
+                    )
 
             Initialized appModel ->
                 case appModel.page of

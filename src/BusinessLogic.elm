@@ -1,9 +1,10 @@
 module BusinessLogic exposing (..)
 
 import Date exposing (Date, Unit(..), add, fromIsoString)
+import Json.Decode as Decode
 import List.Extra as LE
 import Time exposing (Month(..))
-import Types exposing (BudgetDefinition, Frequency(..), Item, RawDefinition, RawScratch, Scratch)
+import Types exposing (BudgetDefinition, Frequency(..), Item, RawDefinition, RawScratch, Scratch, SessionInfo)
 
 
 extractItems : Date -> List BudgetDefinition -> List Item
@@ -59,43 +60,65 @@ computeResults items scratch =
     { totalOwing = totalOwing, totalOutstanding = min 0 (scratch.amountAvailable - scratch.amountLeftOver - totalOwing) }
 
 
-convertRawScratch : RawScratch -> Maybe Scratch
-convertRawScratch raw =
-    Maybe.map (\endDate -> Scratch endDate raw.amountAvailable raw.amountLeftOver)
-        (fromIsoString raw.endDate |> Result.toMaybe)
+dateDecoder : Decode.Decoder Date
+dateDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case fromIsoString str of
+                    Ok d ->
+                        Decode.succeed d
+
+                    Err err ->
+                        Decode.fail err
+            )
 
 
-convertRawDefinition : RawDefinition -> Maybe BudgetDefinition
-convertRawDefinition raw =
-    Maybe.map3
-        (\startDate endDate frequency ->
-            { startDate = startDate
-            , endDate = endDate
-            , description = raw.description
-            , amount = raw.amount
-            , frequency = frequency
-            , isAutomatic = raw.isAutomatic
-            }
-        )
-        (fromIsoString raw.startDate |> Result.toMaybe)
-        (raw.endDate |> Maybe.map (fromIsoString >> Result.toMaybe))
-        (parseFrequency raw.frequency)
+rawScratchDecoder : Decode.Decoder Scratch
+rawScratchDecoder =
+    Decode.map3 Scratch
+        (Decode.field "endDate" dateDecoder)
+        (Decode.field "amountInBank" Decode.float)
+        (Decode.field "amountLeftOver" Decode.float)
 
 
-parseFrequency : String -> Maybe Frequency
-parseFrequency str =
-    case str of
-        "onetime" ->
-            Just OneTime
+rawDefinitionDecoder : Decode.Decoder BudgetDefinition
+rawDefinitionDecoder =
+    Decode.map6 BudgetDefinition
+        (Decode.field "startDate" dateDecoder)
+        (Decode.field "endDate" (Decode.nullable dateDecoder))
+        (Decode.field "description" Decode.string)
+        (Decode.field "amount" Decode.float)
+        (Decode.field "frequency" frequencyDecoder)
+        (Decode.field "isAutomatic" Decode.bool)
 
-        "weekly" ->
-            Just Weekly
 
-        "biweekly" ->
-            Just BiWeekly
+sessionInfoDecoder : Decode.Decoder SessionInfo
+sessionInfoDecoder =
+    Decode.map3 SessionInfo
+        (Decode.field "email" Decode.string)
+        (Decode.field "userId" Decode.string)
+        (Decode.field "confirmed" Decode.bool)
 
-        "monthly" ->
-            Just Monthly
 
-        _ ->
-            Nothing
+frequencyDecoder : Decode.Decoder Frequency
+frequencyDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "onetime" ->
+                        Decode.succeed OneTime
+
+                    "weekly" ->
+                        Decode.succeed Weekly
+
+                    "biweekly" ->
+                        Decode.succeed BiWeekly
+
+                    "monthly" ->
+                        Decode.succeed Monthly
+
+                    _ ->
+                        Decode.fail "Couldn't decode frequency"
+            )

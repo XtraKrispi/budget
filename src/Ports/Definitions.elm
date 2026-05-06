@@ -1,12 +1,12 @@
 port module Ports.Definitions exposing (..)
 
-import Types exposing (RawDefinition)
+import Json.Decode as Decode
 
 
 port fetchDefinitions : () -> Cmd msg
 
 
-port fetchDefinitionsSuccess : (List RawDefinition -> msg) -> Sub msg
+port fetchDefinitionsSuccess : (Decode.Value -> msg) -> Sub msg
 
 
 port fetchDefinitionsFailure : (String -> msg) -> Sub msg

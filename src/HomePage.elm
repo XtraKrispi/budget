@@ -1,10 +1,11 @@
 module HomePage exposing (..)
 
-import BusinessLogic exposing (computeResults, convertRawDefinition, convertRawScratch, defaultScratch, extractItems)
+import BusinessLogic exposing (computeResults, defaultScratch, extractItems, rawDefinitionDecoder, rawScratchDecoder)
 import Date exposing (Date)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
+import Json.Decode as Decode
 import Maybe.Extra as ME
 import Numeral
 import Ports.Clipboard exposing (copyToClipboard)
@@ -122,13 +123,12 @@ subscriptions _ =
         [ fetchDefinitionsSuccess
             (\raw ->
                 case
-                    raw
-                        |> ME.traverse convertRawDefinition
+                    Decode.decodeValue (Decode.list rawDefinitionDecoder) raw
                 of
-                    Just def ->
-                        DefinitionsFetched (Ok def)
+                    Ok defs ->
+                        DefinitionsFetched (Ok defs)
 
-                    Nothing ->
+                    Err _ ->
                         DefinitionsFetched (Err "Couldn't convert from DB to app types")
             )
         , fetchDefinitionsFailure (\err -> DefinitionsFetched (Err err))
@@ -139,11 +139,11 @@ subscriptions _ =
                         ScratchFetched (Err "No scratch found")
 
                     Just s ->
-                        case convertRawScratch s of
-                            Just scratch ->
+                        case Decode.decodeValue rawScratchDecoder s of
+                            Ok scratch ->
                                 ScratchFetched (Ok scratch)
 
-                            Nothing ->
+                            Err _ ->
                                 ScratchFetched (Err "Couldn't convert from DB to app types")
             )
         , fetchScratchFailure (\err -> DefinitionsFetched (Err err))
