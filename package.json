@@ -1,0 +1,24 @@
+{
+  "name": "budget-supabase",
+  "version": "1.0.0",
+  "scripts": {
+    "tailwind:dev": "npx @tailwindcss/cli -i ./src/input.css -o ./public/app.css --watch",
+    "server:dev": "parcel index.html"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.105.3",
+    "@tailwindcss/cli": "^4.2.4",
+    "tailwindcss": "^4.2.4"
+  },
+  "devDependencies": {
+    "@parcel/transformer-elm": "^2.16.4",
+    "@tailwindcss/typography": "^0.5.19",
+    "buffer": "^6.0.3",
+    "daisyui": "^5.5.19",
+    "parcel": "^2.16.4"
+  }
+}

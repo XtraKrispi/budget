@@ -1,0 +1,47 @@
+module Types exposing (..)
+
+import Date exposing (Date)
+
+
+type Frequency
+    = OneTime
+    | Weekly
+    | BiWeekly
+    | Monthly
+
+
+type alias BudgetDefinition =
+    { startDate : Date
+    , endDate : Maybe Date
+    , description : String
+    , amount : Float
+    , frequency : Frequency
+    , isAutomatic : Bool
+    }
+
+
+type alias Item =
+    { date : Date
+    , definition : BudgetDefinition
+    }
+
+
+type alias Scratch =
+    { endDate : Date, amountAvailable : Float, amountLeftOver : Float }
+
+
+type alias RawDefinition =
+    { startDate : String
+    , endDate : Maybe String
+    , description : String
+    , amount : Float
+    , frequency : String
+    , isAutomatic : Bool
+    }
+
+
+type alias RawScratch =
+    { endDate : String
+    , amountAvailable : Float
+    , amountLeftOver : Float
+    }
