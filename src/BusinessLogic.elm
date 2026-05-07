@@ -5,19 +5,19 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra as LE
 import Time exposing (Month(..))
-import Types exposing (BudgetDefinition, Frequency(..), Item, Scratch, SessionInfo)
+import Types exposing (ArchiveAction(..), BudgetDefinition, Frequency(..), Item, Scratch, SessionInfo)
 
 
-extractItems : Date -> List BudgetDefinition -> List Item
+extractItems : Date -> List ( BudgetDefinition, Int ) -> List Item
 extractItems endDate defs =
     defs
-        |> LE.andThen (\def -> def |> extractDatesForDefinition endDate |> List.map (extractItem def))
+        |> LE.andThen (\( def, id ) -> def |> extractDatesForDefinition endDate |> List.map (extractItem def id))
         |> List.sortBy (\item -> Date.toRataDie item.date)
 
 
-extractItem : BudgetDefinition -> Date -> Item
-extractItem def date =
-    { date = date, definition = def }
+extractItem : BudgetDefinition -> Int -> Date -> Item
+extractItem def defId date =
+    { date = date, definition = def, definitionId = defId }
 
 
 extractDatesForDefinition : Date -> BudgetDefinition -> List Date
@@ -84,24 +84,30 @@ rawScratchDecoder =
         (Decode.field "id" Decode.int)
 
 
+encodeDate : Date -> Encode.Value
+encodeDate date =
+    Encode.string (toIsoString date)
+
+
 encodeScratch : Scratch -> Encode.Value
 encodeScratch scratch =
     Encode.object
-        [ ( "endDate", Encode.string (toIsoString scratch.endDate) )
+        [ ( "endDate", encodeDate scratch.endDate )
         , ( "amountInBank", Encode.float scratch.amountInBank )
         , ( "amountLeftOver", Encode.float scratch.amountLeftOver )
         ]
 
 
-rawDefinitionDecoder : Decode.Decoder BudgetDefinition
+rawDefinitionDecoder : Decode.Decoder ( BudgetDefinition, Int )
 rawDefinitionDecoder =
-    Decode.map6 BudgetDefinition
+    Decode.map7 (\sd ed d a f auto id -> ( BudgetDefinition sd ed d a f auto, id ))
         (Decode.field "startDate" dateDecoder)
         (Decode.field "endDate" (Decode.nullable dateDecoder))
         (Decode.field "description" Decode.string)
         (Decode.field "amount" Decode.float)
         (Decode.field "frequency" frequencyDecoder)
         (Decode.field "isAutomatic" Decode.bool)
+        (Decode.field "id" Decode.int)
 
 
 sessionInfoDecoder : Decode.Decoder SessionInfo
@@ -133,3 +139,24 @@ frequencyDecoder =
                     _ ->
                         Decode.fail "Couldn't decode frequency"
             )
+
+
+encodeAction : ArchiveAction -> Encode.Value
+encodeAction action =
+    case action of
+        PayAction ->
+            Encode.string "pay"
+
+        SkipAction ->
+            Encode.string "skip"
+
+
+encodeArchive : Item -> ArchiveAction -> Encode.Value
+encodeArchive item action =
+    Encode.object
+        [ ( "definitionId", Encode.int item.definitionId )
+        , ( "description", Encode.string item.definition.description )
+        , ( "amount", Encode.float item.definition.amount )
+        , ( "date", encodeDate item.date )
+        , ( "action", encodeAction action )
+        ]

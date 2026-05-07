@@ -54,6 +54,7 @@ app.ports.fetchDefinitions.subscribe(async () => {
             , amount: def.amount
             , frequency: def.frequency
             , isAutomatic: def.is_automatic_withdrawal
+            , id: def.id
         })));
     }
 });
@@ -98,5 +99,14 @@ app.ports.updateScratch.subscribe(async ({ data, id }) => {
         app.ports.saveScratchFailure.send(error.message);
     } else {
         app.ports.saveScratchSuccess.send(id);
+    }
+});
+
+app.ports.insertArchive.subscribe(async ({ data, userId }) => {
+    const results = await supabase.from("archive").insert({ user_id: userId, definition_id: data.definitionId, description: data.description, amount: data.amount, date: data.date, action: data.action });
+    if (results.error) {
+        app.ports.insertArchiveFailure.send(error.message);
+    } else {
+        app.ports.insertArchiveSuccess.send({});
     }
 });

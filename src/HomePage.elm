@@ -1,12 +1,13 @@
 module HomePage exposing (..)
 
-import BusinessLogic exposing (computeResults, defaultScratch, encodeScratch, extractItems, rawDefinitionDecoder, rawScratchDecoder)
+import BusinessLogic exposing (computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, rawDefinitionDecoder, rawScratchDecoder)
 import Date exposing (Date, fromIsoString, toIsoString)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Json.Decode as Decode
 import Numeral
+import Ports.Archive exposing (insertArchive, insertArchiveFailed, insertArchiveSuccess)
 import Ports.Clipboard exposing (copyToClipboard)
 import Ports.Definitions exposing (fetchDefinitions, fetchDefinitionsFailure, fetchDefinitionsSuccess)
 import Ports.Scratch exposing (fetchScratch, fetchScratchFailure, fetchScratchSuccess, insertScratch, saveScratchFailure, saveScratchSuccess, updateScratch)
@@ -14,7 +15,7 @@ import RemoteData exposing (RemoteData)
 import Task
 import Toast exposing (Toast)
 import Toasty
-import Types exposing (BudgetDefinition, Item, Scratch, SessionInfo)
+import Types exposing (ArchiveAction(..), BudgetDefinition, Item, Scratch, SessionInfo)
 
 
 type Model
@@ -30,7 +31,7 @@ type alias EditingScratch =
 
 
 type alias HomePageModel =
-    { definitions : RemoteData String (List BudgetDefinition)
+    { definitions : RemoteData String (List ( BudgetDefinition, Int ))
     , scratch : RemoteData String (Maybe ( Scratch, Int ))
     , today : Date
     , editingScratch : EditingScratch
@@ -46,12 +47,14 @@ type Msg
     | RecalculateTotals
     | RecalculateSuccess Int
     | RecalculateFailed String
-    | DefinitionsFetched (Result String (List BudgetDefinition))
+    | DefinitionsFetched (Result String (List ( BudgetDefinition, Int )))
     | ScratchFetched (Result String (Maybe ( Scratch, Int )))
     | ScratchDateUpdated String
     | ScratchAmountInBankUpdated String
     | ScratchAmountLeftOverUpdated String
     | ToastyMsg (Toasty.Msg (Toast Msg))
+    | InsertArchiveSuccess
+    | InsertArchiveFailed String
 
 
 init : ( Model, Cmd Msg )
@@ -100,10 +103,10 @@ update sessionInfo msg model =
             ( model, copyToClipboard (String.fromFloat amt) )
 
         Skip item ->
-            ( model, Cmd.none )
+            ( model, insertArchive { data = encodeArchive item SkipAction, userId = sessionInfo.userId } )
 
         Pay item ->
-            ( model, Cmd.none )
+            ( model, insertArchive { data = encodeArchive item PayAction, userId = sessionInfo.userId } )
 
         RecalculateTotals ->
             case model of
@@ -232,6 +235,12 @@ update sessionInfo msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        InsertArchiveSuccess ->
+            ( model, Cmd.none )
+
+        InsertArchiveFailed err ->
+            ( model, Cmd.none )
+
         ToastyMsg subMsg ->
             case model of
                 Initialized mdl ->
@@ -277,6 +286,8 @@ subscriptions _ =
         , fetchScratchFailure (ScratchFetched << Err)
         , saveScratchSuccess RecalculateSuccess
         , saveScratchFailure RecalculateFailed
+        , insertArchiveSuccess (always InsertArchiveSuccess)
+        , insertArchiveFailed InsertArchiveFailed
         ]
 
 

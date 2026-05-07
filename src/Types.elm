@@ -30,6 +30,7 @@ type alias BudgetDefinition =
 type alias Item =
     { date : Date
     , definition : BudgetDefinition
+    , definitionId : Int
     }
 
 
@@ -55,3 +56,8 @@ type alias RawScratch =
     , amountInBank : Float
     , amountLeftOver : Float
     }
+
+
+type ArchiveAction
+    = PayAction
+    | SkipAction
