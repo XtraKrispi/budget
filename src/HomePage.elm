@@ -146,7 +146,7 @@ subscriptions _ =
                             Err _ ->
                                 ScratchFetched (Err "Couldn't convert from DB to app types")
             )
-        , fetchScratchFailure (\err -> DefinitionsFetched (Err err))
+        , fetchScratchFailure (\err -> ScratchFetched (Err err))
         ]
 
 

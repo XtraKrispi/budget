@@ -16,10 +16,6 @@ import Url.Parser
 
 
 
---TODO: There is a bug where logging in causes infinite rendering...
--- this does not trigger additional Cmds in Elm though
-
-
 main : Program () Model Msg
 main =
     Browser.application
@@ -166,6 +162,16 @@ update msg model =
 
                 _ ->
                     ( model, Cmd.none )
+
+        LoginPageMsg (LoginPage.LoginSucceeded sessionInfo) ->
+            let
+                ( key, _ ) =
+                    getKeyAndSession model
+
+                ( newModel, cmd ) =
+                    routeInit key HomeR (Just sessionInfo)
+            in
+            ( newModel, Cmd.batch [ Nav.pushUrl key "/", cmd ] )
 
         LoginPageMsg lpm ->
             case model of

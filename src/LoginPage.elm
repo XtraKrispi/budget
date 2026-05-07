@@ -1,6 +1,5 @@
 module LoginPage exposing (..)
 
-import Browser.Navigation as Nav
 import BusinessLogic exposing (sessionInfoDecoder)
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -88,7 +87,7 @@ update msg model =
             )
 
         LoginSucceeded _ ->
-            ( model, Nav.load "/" )
+            ( model, Cmd.none )
 
         LoginFailed err ->
             ( model, Cmd.none )
