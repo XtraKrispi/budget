@@ -5,13 +5,20 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra as LE
 import Time exposing (Month(..))
-import Types exposing (ArchiveAction(..), BudgetDefinition, Frequency(..), Item, Scratch, SessionInfo)
+import Types exposing (Archive, ArchiveAction(..), BudgetDefinition, Frequency(..), Item, Scratch, SessionInfo)
 
 
-extractItems : Date -> List ( BudgetDefinition, Int ) -> List Item
-extractItems endDate defs =
+extractItems : Date -> List Archive -> List ( BudgetDefinition, Int ) -> List Item
+extractItems endDate archive defs =
     defs
         |> LE.andThen (\( def, id ) -> def |> extractDatesForDefinition endDate |> List.map (extractItem def id))
+        |> List.filter
+            (\item ->
+                not
+                    (List.any (\a -> a.date == item.date && a.definitionId == item.definitionId)
+                        archive
+                    )
+            )
         |> List.sortBy (\item -> Date.toRataDie item.date)
 
 
@@ -151,6 +158,23 @@ encodeAction action =
             Encode.string "skip"
 
 
+actionDecoder : Decode.Decoder ArchiveAction
+actionDecoder =
+    Decode.string
+        |> Decode.andThen
+            (\str ->
+                case str of
+                    "pay" ->
+                        Decode.succeed PayAction
+
+                    "skip" ->
+                        Decode.succeed SkipAction
+
+                    _ ->
+                        Decode.fail "invalid archive action"
+            )
+
+
 encodeArchive : Item -> ArchiveAction -> Encode.Value
 encodeArchive item action =
     Encode.object
@@ -160,3 +184,13 @@ encodeArchive item action =
         , ( "date", encodeDate item.date )
         , ( "action", encodeAction action )
         ]
+
+
+archiveDecoder : Decode.Decoder Archive
+archiveDecoder =
+    Decode.map5 Archive
+        (Decode.field "date" dateDecoder)
+        (Decode.field "definitionId" Decode.int)
+        (Decode.field "description" Decode.string)
+        (Decode.field "amount" Decode.float)
+        (Decode.field "action" actionDecoder)

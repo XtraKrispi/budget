@@ -41,6 +41,15 @@ type alias Scratch =
     }
 
 
+type alias Archive =
+    { date : Date
+    , definitionId : Int
+    , description : String
+    , amount : Float
+    , action : ArchiveAction
+    }
+
+
 type alias RawDefinition =
     { startDate : String
     , endDate : Maybe String

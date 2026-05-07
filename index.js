@@ -65,7 +65,6 @@ app.ports.fetchScratch.subscribe(async () => {
         app.ports.fetchScratchFailure.send(error.message);
     } else {
         if (data) {
-            debugger;
             app.ports.fetchScratchSuccess.send({
                 endDate: data.end_date,
                 amountInBank: data.amount_in_bank,
@@ -99,6 +98,21 @@ app.ports.updateScratch.subscribe(async ({ data, id }) => {
         app.ports.saveScratchFailure.send(error.message);
     } else {
         app.ports.saveScratchSuccess.send(id);
+    }
+});
+
+app.ports.fetchArchive.subscribe(async () => {
+    const results = await supabase.from("archive").select();
+    if (results.error) {
+        app.ports.fetchArchiveFailure.send(results.error.message);
+    } else {
+        app.ports.fetchArchiveSuccess.send(results.data.map((archive) => ({
+            date: archive.date,
+            definitionId: archive.definition_id,
+            description: archive.description,
+            amount: archive.amount,
+            action: archive.action
+        })));
     }
 });
 

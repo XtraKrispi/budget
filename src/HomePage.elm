@@ -1,13 +1,13 @@
 module HomePage exposing (..)
 
-import BusinessLogic exposing (computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, rawDefinitionDecoder, rawScratchDecoder)
+import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, rawDefinitionDecoder, rawScratchDecoder)
 import Date exposing (Date, fromIsoString, toIsoString)
 import Html exposing (Html)
 import Html.Attributes as Attr
 import Html.Events as Events
 import Json.Decode as Decode
 import Numeral
-import Ports.Archive exposing (insertArchive, insertArchiveFailed, insertArchiveSuccess)
+import Ports.Archive exposing (fetchArchive, fetchArchiveFailure, fetchArchiveSuccess, insertArchive, insertArchiveFailure, insertArchiveSuccess)
 import Ports.Clipboard exposing (copyToClipboard)
 import Ports.Definitions exposing (fetchDefinitions, fetchDefinitionsFailure, fetchDefinitionsSuccess)
 import Ports.Scratch exposing (fetchScratch, fetchScratchFailure, fetchScratchSuccess, insertScratch, saveScratchFailure, saveScratchSuccess, updateScratch)
@@ -15,7 +15,12 @@ import RemoteData exposing (RemoteData)
 import Task
 import Toast exposing (Toast)
 import Toasty
-import Types exposing (ArchiveAction(..), BudgetDefinition, Item, Scratch, SessionInfo)
+import Types exposing (Archive, ArchiveAction(..), BudgetDefinition, Item, Scratch, SessionInfo)
+
+
+
+-- TODO: 1) Reload on Pay/Skip? Or do I do a round trip with the data to indicate which is gone, and just filter it out?
+--       2) All toast messages
 
 
 type Model
@@ -33,6 +38,7 @@ type alias EditingScratch =
 type alias HomePageModel =
     { definitions : RemoteData String (List ( BudgetDefinition, Int ))
     , scratch : RemoteData String (Maybe ( Scratch, Int ))
+    , archive : RemoteData String (List Archive)
     , today : Date
     , editingScratch : EditingScratch
     , toasties : Toasty.Stack (Toast Msg)
@@ -49,6 +55,7 @@ type Msg
     | RecalculateFailed String
     | DefinitionsFetched (Result String (List ( BudgetDefinition, Int )))
     | ScratchFetched (Result String (Maybe ( Scratch, Int )))
+    | ArchiveFetched (Result String (List Archive))
     | ScratchDateUpdated String
     | ScratchAmountInBankUpdated String
     | ScratchAmountLeftOverUpdated String
@@ -89,11 +96,16 @@ update sessionInfo msg model =
                     ( Initialized
                         { definitions = RemoteData.Loading
                         , scratch = RemoteData.Loading
+                        , archive = RemoteData.Loading
                         , today = date
                         , editingScratch = toEditingScratch (defaultScratch date)
                         , toasties = Toasty.initialState
                         }
-                    , Cmd.batch [ fetchDefinitions (), fetchScratch () ]
+                    , Cmd.batch
+                        [ fetchDefinitions ()
+                        , fetchScratch ()
+                        , fetchArchive ()
+                        ]
                     )
 
                 Initialized mdl ->
@@ -171,6 +183,15 @@ update sessionInfo msg model =
                         }
                     , Cmd.none
                     )
+
+                Initializing ->
+                    ( model, Cmd.none )
+
+        ArchiveFetched results ->
+            case model of
+                Initialized mdl ->
+                    ( { mdl | archive = RemoteData.fromResult results }, Cmd.none )
+                        |> Tuple.mapFirst Initialized
 
                 Initializing ->
                     ( model, Cmd.none )
@@ -287,27 +308,38 @@ subscriptions _ =
         , saveScratchSuccess RecalculateSuccess
         , saveScratchFailure RecalculateFailed
         , insertArchiveSuccess (always InsertArchiveSuccess)
-        , insertArchiveFailed InsertArchiveFailed
+        , insertArchiveFailure InsertArchiveFailed
+        , fetchArchiveSuccess
+            (\raw ->
+                case Decode.decodeValue (Decode.list archiveDecoder) raw of
+                    Ok archive ->
+                        ArchiveFetched (Ok archive)
+
+                    Err _ ->
+                        ArchiveFetched (Err "Couldn't convert from DB to app types")
+            )
+        , fetchArchiveFailure (ArchiveFetched << Err)
         ]
 
 
 getItemsAndScratch : HomePageModel -> RemoteData String ( List Item, Scratch )
 getItemsAndScratch model =
-    RemoteData.map2
-        (\defs s ->
+    RemoteData.map3
+        (\defs s archive ->
             case s of
                 Nothing ->
                     let
                         def =
                             defaultScratch model.today
                     in
-                    ( extractItems def.endDate defs, def )
+                    ( extractItems def.endDate archive defs, def )
 
                 Just ( s_, _ ) ->
-                    ( extractItems s_.endDate defs, s_ )
+                    ( extractItems s_.endDate archive defs, s_ )
         )
         model.definitions
         model.scratch
+        model.archive
 
 
 itemsSection : Model -> Html Msg
