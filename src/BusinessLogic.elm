@@ -1,10 +1,11 @@
 module BusinessLogic exposing (..)
 
-import Date exposing (Date, Unit(..), add, fromIsoString)
+import Date exposing (Date, Unit(..), add, fromIsoString, toIsoString)
 import Json.Decode as Decode
+import Json.Encode as Encode
 import List.Extra as LE
 import Time exposing (Month(..))
-import Types exposing (BudgetDefinition, Frequency(..), Item, RawDefinition, RawScratch, Scratch, SessionInfo)
+import Types exposing (BudgetDefinition, Frequency(..), Item, Scratch, SessionInfo)
 
 
 extractItems : Date -> List BudgetDefinition -> List Item
@@ -46,7 +47,7 @@ extractDatesForDefinition endDate def =
 defaultScratch : Date -> Scratch
 defaultScratch today =
     { endDate = add Days 14 today
-    , amountAvailable = 0
+    , amountInBank = 0
     , amountLeftOver = 0
     }
 
@@ -57,7 +58,7 @@ computeResults items scratch =
         totalOwing =
             items |> List.foldr (\item total -> item.definition.amount + total) 0
     in
-    { totalOwing = totalOwing, totalOutstanding = min 0 (scratch.amountAvailable - scratch.amountLeftOver - totalOwing) }
+    { totalOwing = totalOwing, totalOutstanding = abs (min 0 (scratch.amountInBank - scratch.amountLeftOver - totalOwing)) }
 
 
 dateDecoder : Decode.Decoder Date
@@ -74,12 +75,22 @@ dateDecoder =
             )
 
 
-rawScratchDecoder : Decode.Decoder Scratch
+rawScratchDecoder : Decode.Decoder ( Scratch, Int )
 rawScratchDecoder =
-    Decode.map3 Scratch
+    Decode.map4 (\endDate amountInBank amountLeftOver id -> ( Scratch endDate amountInBank amountLeftOver, id ))
         (Decode.field "endDate" dateDecoder)
         (Decode.field "amountInBank" Decode.float)
         (Decode.field "amountLeftOver" Decode.float)
+        (Decode.field "id" Decode.int)
+
+
+encodeScratch : Scratch -> Encode.Value
+encodeScratch scratch =
+    Encode.object
+        [ ( "endDate", Encode.string (toIsoString scratch.endDate) )
+        , ( "amountInBank", Encode.float scratch.amountInBank )
+        , ( "amountLeftOver", Encode.float scratch.amountLeftOver )
+        ]
 
 
 rawDefinitionDecoder : Decode.Decoder BudgetDefinition

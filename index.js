@@ -64,10 +64,12 @@ app.ports.fetchScratch.subscribe(async () => {
         app.ports.fetchScratchFailure.send(error.message);
     } else {
         if (data) {
+            debugger;
             app.ports.fetchScratchSuccess.send({
                 endDate: data.end_date,
                 amountInBank: data.amount_in_bank,
-                amountLeftOver: data.amount_left_over
+                amountLeftOver: data.amount_left_over,
+                id: data.id
             });
 
         } else {
@@ -79,4 +81,22 @@ app.ports.fetchScratch.subscribe(async () => {
 app.ports.logout.subscribe(async () => {
     await supabase.auth.signOut();
     app.ports.loggedOut.send({});
+});
+
+app.ports.insertScratch.subscribe(async ({ data, userId }) => {
+    const results = await supabase.from("scratch").insert({ end_date: data.endDate, amount_in_bank: data.amountInBank, amount_left_over: data.amountLeftOver, user_id: userId }).select().limit(1).single();
+    if (results.error) {
+        app.ports.saveScratchFailure.send(error.message);
+    } else {
+        app.ports.saveScratchSuccess.send(results.data.id);
+    }
+});
+
+app.ports.updateScratch.subscribe(async ({ data, id }) => {
+    const results = await supabase.from("scratch").update({ end_date: data.endDate, amount_in_bank: data.amountInBank, amount_left_over: data.amountLeftOver }).eq('id', id);
+    if (results.error) {
+        app.ports.saveScratchFailure.send(error.message);
+    } else {
+        app.ports.saveScratchSuccess.send(id);
+    }
 });

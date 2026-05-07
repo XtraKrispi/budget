@@ -15,7 +15,6 @@ import Url
 import Url.Parser
 
 
-
 main : Program () Model Msg
 main =
     Browser.application
@@ -149,11 +148,11 @@ update msg model =
         HomePageMsg hpm ->
             case model of
                 Initialized appModel ->
-                    case appModel.page of
-                        HomePage mdl ->
+                    case ( appModel.page, appModel.session ) of
+                        ( HomePage mdl, Just session ) ->
                             let
                                 ( newMdl, cmd ) =
-                                    HomePage.update hpm mdl
+                                    HomePage.update session hpm mdl
                             in
                             ( Initialized { appModel | page = HomePage newMdl }, Cmd.map HomePageMsg cmd )
 

@@ -34,7 +34,10 @@ type alias Item =
 
 
 type alias Scratch =
-    { endDate : Date, amountAvailable : Float, amountLeftOver : Float }
+    { endDate : Date
+    , amountInBank : Float
+    , amountLeftOver : Float
+    }
 
 
 type alias RawDefinition =
@@ -49,6 +52,6 @@ type alias RawDefinition =
 
 type alias RawScratch =
     { endDate : String
-    , amountAvailable : Float
+    , amountInBank : Float
     , amountLeftOver : Float
     }
