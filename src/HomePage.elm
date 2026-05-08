@@ -19,8 +19,7 @@ import Types exposing (Archive, ArchiveAction(..), BudgetDefinition, Item, Scrat
 
 
 
--- TODO: 1) Reload on Pay/Skip? Or do I do a round trip with the data to indicate which is gone, and just filter it out?
---       2) All toast messages
+-- TODO: 1) All toast messages
 
 
 type Model
@@ -60,7 +59,7 @@ type Msg
     | ScratchAmountInBankUpdated String
     | ScratchAmountLeftOverUpdated String
     | ToastyMsg (Toasty.Msg (Toast Msg))
-    | InsertArchiveSuccess
+    | InsertArchiveSuccess Archive
     | InsertArchiveFailed String
 
 
@@ -256,8 +255,14 @@ update sessionInfo msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        InsertArchiveSuccess ->
-            ( model, Cmd.none )
+        InsertArchiveSuccess archive ->
+            case model of
+                Initialized mdl ->
+                    ( { mdl | archive = RemoteData.map (\a -> archive :: a) mdl.archive }, Cmd.none )
+                        |> Tuple.mapFirst Initialized
+
+                _ ->
+                    ( model, Cmd.none )
 
         InsertArchiveFailed err ->
             ( model, Cmd.none )
@@ -307,7 +312,15 @@ subscriptions _ =
         , fetchScratchFailure (ScratchFetched << Err)
         , saveScratchSuccess RecalculateSuccess
         , saveScratchFailure RecalculateFailed
-        , insertArchiveSuccess (always InsertArchiveSuccess)
+        , insertArchiveSuccess
+            (\raw ->
+                case Decode.decodeValue archiveDecoder raw of
+                    Ok archive ->
+                        InsertArchiveSuccess archive
+
+                    Err _ ->
+                        InsertArchiveFailed "Failed to decode archive"
+            )
         , insertArchiveFailure InsertArchiveFailed
         , fetchArchiveSuccess
             (\raw ->

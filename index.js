@@ -121,6 +121,6 @@ app.ports.insertArchive.subscribe(async ({ data, userId }) => {
     if (results.error) {
         app.ports.insertArchiveFailure.send(error.message);
     } else {
-        app.ports.insertArchiveSuccess.send({});
+        app.ports.insertArchiveSuccess.send(data);
     }
 });

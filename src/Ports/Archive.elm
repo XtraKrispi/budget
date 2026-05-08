@@ -6,7 +6,7 @@ import Json.Encode as Encode
 port insertArchive : { data : Encode.Value, userId : String } -> Cmd msg
 
 
-port insertArchiveSuccess : ({} -> msg) -> Sub msg
+port insertArchiveSuccess : (Encode.Value -> msg) -> Sub msg
 
 
 port insertArchiveFailure : (String -> msg) -> Sub msg
