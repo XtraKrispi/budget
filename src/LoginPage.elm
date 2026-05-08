@@ -7,8 +7,6 @@ import Html.Events as Events
 import Json.Decode as Decode
 import Ports.Auth as Auth exposing (signIn, signUp)
 import Ports.Dialog as Dialog
-import Svg
-import Svg.Attributes as SA
 import Types exposing (SessionInfo)
 import View.Common exposing (dialogCloseButton)
 
@@ -68,9 +66,11 @@ update msg model =
             ( { model | registrationPasswordConfirmation = txt }, Cmd.none )
 
         SignUpSucceeded str ->
+            -- TODO: Close modal, bring up a toast?
             ( model, Cmd.none )
 
         SignUpFailed str ->
+            -- TODO : Toast?
             ( model, Cmd.none )
 
         LoginEmailUpdated str ->
@@ -91,6 +91,7 @@ update msg model =
             ( model, Cmd.none )
 
         LoginFailed err ->
+            -- TODO: Toast
             ( model, Cmd.none )
 
 

@@ -3378,6 +3378,12 @@
       --size: calc(var(--size-field, 0.25rem) * 8);
     }
   }
+  .badge-accent {
+    @layer daisyui.l1.l2 {
+      --badge-color: var(--color-accent);
+      --badge-fg: var(--color-accent-content);
+    }
+  }
   .badge-primary {
     @layer daisyui.l1.l2 {
       --badge-color: var(--color-primary);

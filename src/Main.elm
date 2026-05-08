@@ -1,6 +1,7 @@
 module Main exposing (main)
 
 import Admin.DefinitionsPage as DefinitionsPage
+import ArchivePage
 import Browser
 import Browser.Navigation as Nav
 import BusinessLogic exposing (sessionInfoDecoder)
@@ -35,6 +36,7 @@ type Page
     = LoginPage LoginPage.Model
     | HomePage HomePage.Model
     | DefinitionsPage DefinitionsPage.Model
+    | ArchivePage ArchivePage.Model
     | NotFoundPage
 
 
@@ -58,10 +60,10 @@ routeInit key route today mSessionInfo =
     case ( route, mSessionInfo ) of
         ( ArchiveR, Just session ) ->
             let
-                ( loginPageModel, loginPageCmd ) =
-                    LoginPage.init
+                ( archivePageModel, archivePageCmd ) =
+                    ArchivePage.init
             in
-            ( Initialized (AppModel key route (LoginPage loginPageModel) (Just session) today), Cmd.map LoginPageMsg loginPageCmd )
+            ( Initialized (AppModel key route (ArchivePage archivePageModel) (Just session) today), Cmd.map ArchivePageMsg archivePageCmd )
 
         ( HomeR, Just session ) ->
             let
@@ -127,6 +129,7 @@ type Msg
     | LoginPageMsg LoginPage.Msg
     | HomePageMsg HomePage.Msg
     | DefinitionsPageMsg DefinitionsPage.Msg
+    | ArchivePageMsg ArchivePage.Msg
     | GotUser (Maybe SessionInfo)
     | Logout
     | LoggedOut
@@ -222,6 +225,23 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
+        ArchivePageMsg dpm ->
+            case model of
+                Initialized appModel ->
+                    case ( appModel.page, appModel.session ) of
+                        ( ArchivePage mdl, Just _ ) ->
+                            let
+                                ( newMdl, cmd ) =
+                                    ArchivePage.update dpm mdl
+                            in
+                            ( Initialized { appModel | page = ArchivePage newMdl }, Cmd.map ArchivePageMsg cmd )
+
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
         LoginPageMsg (LoginPage.LoginSucceeded sessionInfo) ->
             case model of
                 Initialized mdl ->
@@ -309,6 +329,9 @@ subscriptions model =
                     DefinitionsPage mdl ->
                         Sub.map DefinitionsPageMsg (DefinitionsPage.subscriptions mdl)
 
+                    ArchivePage mdl ->
+                        Sub.map ArchivePageMsg (ArchivePage.subscriptions mdl)
+
                     NotFoundPage ->
                         Sub.none
         ]
@@ -335,6 +358,9 @@ view model =
 
                     DefinitionsPage mdl ->
                         [ Navbar.navbar Logout appModel.route, Html.map DefinitionsPageMsg (DefinitionsPage.view mdl) ]
+
+                    ArchivePage mdl ->
+                        [ Navbar.navbar Logout appModel.route, Html.map ArchivePageMsg (ArchivePage.view mdl) ]
 
                     NotFoundPage ->
                         [ Html.div [] [] ]
