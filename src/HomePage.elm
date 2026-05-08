@@ -1,6 +1,6 @@
 module HomePage exposing (..)
 
-import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, rawDefinitionDecoder, rawScratchDecoder)
+import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, isError, rawDefinitionDecoder, rawScratchDecoder)
 import Date exposing (Date, fromIsoString, toIsoString)
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -16,10 +16,6 @@ import Task
 import Toast exposing (Toast)
 import Toasty
 import Types exposing (Archive, ArchiveAction(..), BudgetDefinition, Item, Scratch, SessionInfo)
-
-
-
--- TODO: 1) All toast messages
 
 
 type Model
@@ -148,13 +144,21 @@ update sessionInfo msg model =
                 Initializing ->
                     ( model, Cmd.none )
 
-        RecalculateFailed err ->
-            ( model, Cmd.none )
+        RecalculateFailed _ ->
+            case model of
+                Initialized mdl ->
+                    ( mdl, Cmd.none )
+                        |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was an issue recalculating, please try again." ] }
+                        |> Tuple.mapFirst Initialized
+
+                _ ->
+                    ( model, Cmd.none )
 
         DefinitionsFetched results ->
             case model of
                 Initialized mdl ->
                     ( { mdl | definitions = RemoteData.fromResult results }, Cmd.none )
+                        |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> isError results) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
                         |> Tuple.mapFirst Initialized
 
                 Initializing ->
@@ -175,13 +179,14 @@ update sessionInfo msg model =
                                 Err err ->
                                     ( RemoteData.Failure err, defaultScratch mdl.today )
                     in
-                    ( Initialized
-                        { mdl
-                            | scratch = newScratch
-                            , editingScratch = toEditingScratch editingScratch
-                        }
+                    ( { mdl
+                        | scratch = newScratch
+                        , editingScratch = toEditingScratch editingScratch
+                      }
                     , Cmd.none
                     )
+                        |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> RemoteData.isFailure newScratch) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
+                        |> Tuple.mapFirst Initialized
 
                 Initializing ->
                     ( model, Cmd.none )
@@ -190,6 +195,7 @@ update sessionInfo msg model =
             case model of
                 Initialized mdl ->
                     ( { mdl | archive = RemoteData.fromResult results }, Cmd.none )
+                        |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> isError results) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
                         |> Tuple.mapFirst Initialized
 
                 Initializing ->
@@ -264,8 +270,15 @@ update sessionInfo msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        InsertArchiveFailed err ->
-            ( model, Cmd.none )
+        InsertArchiveFailed _ ->
+            case model of
+                Initialized mdl ->
+                    ( mdl, Cmd.none )
+                        |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was a problem executing the action. Please try again." ] }
+                        |> Tuple.mapFirst Initialized
+
+                _ ->
+                    ( model, Cmd.none )
 
         ToastyMsg subMsg ->
             case model of

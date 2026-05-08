@@ -194,3 +194,13 @@ archiveDecoder =
         (Decode.field "description" Decode.string)
         (Decode.field "amount" Decode.float)
         (Decode.field "action" actionDecoder)
+
+
+isError : Result e a -> Bool
+isError r =
+    case r of
+        Ok _ ->
+            False
+
+        _ ->
+            True
