@@ -83,8 +83,8 @@ dateDecoder =
             )
 
 
-rawScratchDecoder : Decode.Decoder ( Scratch, Int )
-rawScratchDecoder =
+scratchDecoder : Decode.Decoder ( Scratch, Int )
+scratchDecoder =
     Decode.map4 (\endDate amountInBank amountLeftOver id -> ( Scratch endDate amountInBank amountLeftOver, id ))
         (Decode.field "endDate" dateDecoder)
         (Decode.field "amountInBank" Decode.float)
@@ -106,8 +106,8 @@ encodeScratch scratch =
         ]
 
 
-rawDefinitionDecoder : Decode.Decoder ( Definition, Int )
-rawDefinitionDecoder =
+definitionDecoder : Decode.Decoder ( Definition, Int )
+definitionDecoder =
     Decode.map7 (\sd ed d a f auto id -> ( Definition sd ed d a f auto, id ))
         (Decode.field "startDate" dateDecoder)
         (Decode.field "endDate" (Decode.nullable dateDecoder))
@@ -118,6 +118,22 @@ rawDefinitionDecoder =
         (Decode.field "id" Decode.int)
 
 
+encodeDefinition : Definition -> Encode.Value
+encodeDefinition def =
+    Encode.object
+        [ ( "startDate", Encode.string (toIsoString def.startDate) )
+        , ( "endDate"
+          , def.endDate
+                |> Maybe.map (Encode.string << toIsoString)
+                |> Maybe.withDefault Encode.null
+          )
+        , ( "description", Encode.string def.description )
+        , ( "amount", Encode.float def.amount )
+        , ( "frequency", Encode.string (frequencyString def.frequency) )
+        , ( "isAutomatic", Encode.bool def.isAutomatic )
+        ]
+
+
 sessionInfoDecoder : Decode.Decoder SessionInfo
 sessionInfoDecoder =
     Decode.map3 SessionInfo
@@ -126,26 +142,36 @@ sessionInfoDecoder =
         (Decode.field "confirmed" Decode.bool)
 
 
+parseFrequency : String -> Result String Frequency
+parseFrequency str =
+    case str of
+        "onetime" ->
+            Ok OneTime
+
+        "weekly" ->
+            Ok Weekly
+
+        "biweekly" ->
+            Ok BiWeekly
+
+        "monthly" ->
+            Ok Monthly
+
+        _ ->
+            Err "Couldn't decode frequency"
+
+
 frequencyDecoder : Decode.Decoder Frequency
 frequencyDecoder =
     Decode.string
         |> Decode.andThen
             (\str ->
-                case str of
-                    "onetime" ->
-                        Decode.succeed OneTime
+                case parseFrequency str of
+                    Ok f ->
+                        Decode.succeed f
 
-                    "weekly" ->
-                        Decode.succeed Weekly
-
-                    "biweekly" ->
-                        Decode.succeed BiWeekly
-
-                    "monthly" ->
-                        Decode.succeed Monthly
-
-                    _ ->
-                        Decode.fail "Couldn't decode frequency"
+                    Err s ->
+                        Decode.fail s
             )
 
 

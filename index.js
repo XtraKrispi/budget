@@ -9,6 +9,10 @@ app.ports.openDialog.subscribe((id) => {
     document.getElementById(id).showModal();
 });
 
+app.ports.closeDialog.subscribe((id) => {
+    document.getElementById(id).close();
+})
+
 app.ports.signUp.subscribe(async ({ email, password }) => {
     const results = await supabase.auth.signUp({ email: email, password: password });
     if (results.error) {
@@ -122,5 +126,32 @@ app.ports.insertArchive.subscribe(async ({ data, userId }) => {
         app.ports.insertArchiveFailure.send(error.message);
     } else {
         app.ports.insertArchiveSuccess.send(data);
+    }
+});
+
+app.ports.insertDefinition.subscribe(async ({ data, userId }) => {
+    const results = await supabase.from("definitions")
+        .insert({ description: data.description, amount: data.amount, frequency: data.frequency, start_date: data.startDate, end_date: data.endDate, is_automatic_withdrawal: data.isAutomatic, user_id: userId }).select().limit(1).single();
+    if (results.error) {
+        app.ports.saveDefinitionFailure.send(error.message);
+    } else {
+        app.ports.saveDefinitionSuccess.send({
+            startDate: results.data.start_date
+            , endDate: results.data.end_date
+            , description: results.data.description
+            , amount: results.data.amount
+            , frequency: results.data.frequency
+            , isAutomatic: results.data.is_automatic_withdrawal
+            , id: results.data.id
+        });
+    }
+});
+
+app.ports.updateDefinition.subscribe(async ({ data, id }) => {
+    const results = await supabase.from("definitions").update({ description: data.description, amount: data.amount, frequency: data.frequency, start_date: data.startDate, end_date: data.endDate, is_automatic_withdrawal: data.isAutomatic }).eq('id', id);
+    if (results.error) {
+        app.ports.saveDefinitionFailure.send(error.message);
+    } else {
+        app.ports.saveDefinitionSuccess.send({ ...data, id: id });
     }
 });

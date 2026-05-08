@@ -1,6 +1,6 @@
 module HomePage exposing (..)
 
-import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, formatAmount, formatDate, isError, rawDefinitionDecoder, rawScratchDecoder)
+import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, definitionDecoder, encodeArchive, encodeScratch, extractItems, formatAmount, formatDate, isError, scratchDecoder)
 import Date exposing (Date, fromIsoString, toIsoString)
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -209,7 +209,7 @@ subscriptions _ =
         [ fetchDefinitionsSuccess
             (\raw ->
                 case
-                    Decode.decodeValue (Decode.list rawDefinitionDecoder) raw
+                    Decode.decodeValue (Decode.list definitionDecoder) raw
                 of
                     Ok defs ->
                         DefinitionsFetched (Ok defs)
@@ -225,7 +225,7 @@ subscriptions _ =
                         ScratchFetched (Ok Nothing)
 
                     Just s ->
-                        case Decode.decodeValue rawScratchDecoder s of
+                        case Decode.decodeValue scratchDecoder s of
                             Ok val ->
                                 ScratchFetched (Ok (Just val))
 

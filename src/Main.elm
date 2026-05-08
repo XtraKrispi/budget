@@ -209,10 +209,10 @@ update msg model =
             case model of
                 Initialized appModel ->
                     case ( appModel.page, appModel.session ) of
-                        ( DefinitionsPage mdl, Just _ ) ->
+                        ( DefinitionsPage mdl, Just session ) ->
                             let
                                 ( newMdl, cmd ) =
-                                    DefinitionsPage.update dpm mdl
+                                    DefinitionsPage.update session dpm mdl
                             in
                             ( Initialized { appModel | page = DefinitionsPage newMdl }, Cmd.map DefinitionsPageMsg cmd )
 
