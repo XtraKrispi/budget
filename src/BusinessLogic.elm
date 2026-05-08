@@ -4,11 +4,12 @@ import Date exposing (Date, Unit(..), add, fromIsoString, toIsoString)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra as LE
+import Numeral
 import Time exposing (Month(..))
-import Types exposing (Archive, ArchiveAction(..), BudgetDefinition, Frequency(..), Item, Scratch, SessionInfo)
+import Types exposing (Archive, ArchiveAction(..), Definition, Frequency(..), Item, Scratch, SessionInfo)
 
 
-extractItems : Date -> List Archive -> List ( BudgetDefinition, Int ) -> List Item
+extractItems : Date -> List Archive -> List ( Definition, Int ) -> List Item
 extractItems endDate archive defs =
     defs
         |> LE.andThen (\( def, id ) -> def |> extractDatesForDefinition endDate |> List.map (extractItem def id))
@@ -22,12 +23,12 @@ extractItems endDate archive defs =
         |> List.sortBy (\item -> Date.toRataDie item.date)
 
 
-extractItem : BudgetDefinition -> Int -> Date -> Item
+extractItem : Definition -> Int -> Date -> Item
 extractItem def defId date =
     { date = date, definition = def, definitionId = defId }
 
 
-extractDatesForDefinition : Date -> BudgetDefinition -> List Date
+extractDatesForDefinition : Date -> Definition -> List Date
 extractDatesForDefinition endDate def =
     let
         go date =
@@ -105,9 +106,9 @@ encodeScratch scratch =
         ]
 
 
-rawDefinitionDecoder : Decode.Decoder ( BudgetDefinition, Int )
+rawDefinitionDecoder : Decode.Decoder ( Definition, Int )
 rawDefinitionDecoder =
-    Decode.map7 (\sd ed d a f auto id -> ( BudgetDefinition sd ed d a f auto, id ))
+    Decode.map7 (\sd ed d a f auto id -> ( Definition sd ed d a f auto, id ))
         (Decode.field "startDate" dateDecoder)
         (Decode.field "endDate" (Decode.nullable dateDecoder))
         (Decode.field "description" Decode.string)
@@ -204,3 +205,50 @@ isError r =
 
         _ ->
             True
+
+
+formatAmount : Float -> String
+formatAmount =
+    Numeral.format "$0,0.00"
+
+
+formatDate : Date -> String
+formatDate =
+    Date.format "Y-MM-dd"
+
+
+prettyPrintFrequency : Frequency -> String
+prettyPrintFrequency freq =
+    case freq of
+        OneTime ->
+            "One Time"
+
+        Weekly ->
+            "Weekly"
+
+        BiWeekly ->
+            "Bi-Weekly"
+
+        Monthly ->
+            "Monthly"
+
+
+frequencyString : Frequency -> String
+frequencyString freq =
+    case freq of
+        OneTime ->
+            "onetime"
+
+        Weekly ->
+            "weekly"
+
+        BiWeekly ->
+            "biweekly"
+
+        Monthly ->
+            "monthly"
+
+
+frequencies : List Frequency
+frequencies =
+    [ OneTime, Weekly, BiWeekly, Monthly ]

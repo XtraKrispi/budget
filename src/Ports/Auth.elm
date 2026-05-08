@@ -1,7 +1,6 @@
 port module Ports.Auth exposing (..)
 
 import Json.Decode as Decode
-import Types exposing (SessionInfo)
 
 
 port signIn : { email : String, password : String } -> Cmd msg

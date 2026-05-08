@@ -31,7 +31,11 @@ navbar onLogout route =
         , div [ class "navbar-end" ]
             [ ul [ class "menu menu-horizontal px-1" ]
                 [ li []
-                    [ button [ class "btn btn-ghost", Events.onClick onLogout ] [ text "Log Out" ]
+                    [ button
+                        [ class "btn btn-ghost"
+                        , Events.onClick onLogout
+                        ]
+                        [ text "Log Out" ]
                     ]
                 ]
             ]

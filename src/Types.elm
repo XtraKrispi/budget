@@ -17,7 +17,7 @@ type Frequency
     | Monthly
 
 
-type alias BudgetDefinition =
+type alias Definition =
     { startDate : Date
     , endDate : Maybe Date
     , description : String
@@ -29,7 +29,7 @@ type alias BudgetDefinition =
 
 type alias Item =
     { date : Date
-    , definition : BudgetDefinition
+    , definition : Definition
     , definitionId : Int
     }
 

@@ -1,6 +1,6 @@
 module HomePage exposing (..)
 
-import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, isError, rawDefinitionDecoder, rawScratchDecoder)
+import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, encodeArchive, encodeScratch, extractItems, formatAmount, formatDate, isError, rawDefinitionDecoder, rawScratchDecoder)
 import Date exposing (Date, fromIsoString, toIsoString)
 import Html exposing (Html)
 import Html.Attributes as Attr
@@ -15,12 +15,17 @@ import RemoteData exposing (RemoteData)
 import Task
 import Toast exposing (Toast)
 import Toasty
-import Types exposing (Archive, ArchiveAction(..), BudgetDefinition, Item, Scratch, SessionInfo)
+import Types exposing (Archive, ArchiveAction(..), Definition, Item, Scratch, SessionInfo)
 
 
-type Model
-    = Initializing
-    | Initialized HomePageModel
+type alias Model =
+    { definitions : RemoteData String (List ( Definition, Int ))
+    , scratch : RemoteData String (Maybe ( Scratch, Int ))
+    , archive : RemoteData String (List Archive)
+    , today : Date
+    , editingScratch : EditingScratch
+    , toasties : Toasty.Stack (Toast Msg)
+    }
 
 
 type alias EditingScratch =
@@ -30,25 +35,14 @@ type alias EditingScratch =
     }
 
 
-type alias HomePageModel =
-    { definitions : RemoteData String (List ( BudgetDefinition, Int ))
-    , scratch : RemoteData String (Maybe ( Scratch, Int ))
-    , archive : RemoteData String (List Archive)
-    , today : Date
-    , editingScratch : EditingScratch
-    , toasties : Toasty.Stack (Toast Msg)
-    }
-
-
 type Msg
-    = GotToday Date
-    | CopyAmount Float
+    = CopyAmount Float
     | Skip Item
     | Pay Item
     | RecalculateTotals
     | RecalculateSuccess Int
     | RecalculateFailed String
-    | DefinitionsFetched (Result String (List ( BudgetDefinition, Int )))
+    | DefinitionsFetched (Result String (List ( Definition, Int )))
     | ScratchFetched (Result String (Maybe ( Scratch, Int )))
     | ArchiveFetched (Result String (List Archive))
     | ScratchDateUpdated String
@@ -59,10 +53,20 @@ type Msg
     | InsertArchiveFailed String
 
 
-init : ( Model, Cmd Msg )
-init =
-    ( Initializing
-    , Task.perform GotToday Date.today
+init : Date -> ( Model, Cmd Msg )
+init today =
+    ( { definitions = RemoteData.Loading
+      , scratch = RemoteData.Loading
+      , archive = RemoteData.Loading
+      , today = today
+      , editingScratch = toEditingScratch (defaultScratch today)
+      , toasties = Toasty.initialState
+      }
+    , Cmd.batch
+        [ fetchDefinitions ()
+        , fetchScratch ()
+        , fetchArchive ()
+        ]
     )
 
 
@@ -85,27 +89,6 @@ toScratch { endDate, amountInBank, amountLeftOver } =
 update : SessionInfo -> Msg -> Model -> ( Model, Cmd Msg )
 update sessionInfo msg model =
     case msg of
-        GotToday date ->
-            case model of
-                Initializing ->
-                    ( Initialized
-                        { definitions = RemoteData.Loading
-                        , scratch = RemoteData.Loading
-                        , archive = RemoteData.Loading
-                        , today = date
-                        , editingScratch = toEditingScratch (defaultScratch date)
-                        , toasties = Toasty.initialState
-                        }
-                    , Cmd.batch
-                        [ fetchDefinitions ()
-                        , fetchScratch ()
-                        , fetchArchive ()
-                        ]
-                    )
-
-                Initialized mdl ->
-                    ( Initialized { mdl | today = date }, Cmd.none )
-
         CopyAmount amt ->
             ( model, copyToClipboard (String.fromFloat amt) )
 
@@ -116,181 +99,108 @@ update sessionInfo msg model =
             ( model, insertArchive { data = encodeArchive item PayAction, userId = sessionInfo.userId } )
 
         RecalculateTotals ->
-            case model of
-                Initialized mdl ->
-                    case ( toScratch mdl.editingScratch, mdl.scratch ) of
-                        ( Just scratch, RemoteData.Success (Just ( _, id )) ) ->
-                            ( model, updateScratch { data = encodeScratch scratch, id = id } )
+            case ( toScratch model.editingScratch, model.scratch ) of
+                ( Just scratch, RemoteData.Success (Just ( _, id )) ) ->
+                    ( model, updateScratch { data = encodeScratch scratch, id = id } )
 
-                        ( Just scratch, _ ) ->
-                            ( model, insertScratch { data = encodeScratch scratch, userId = sessionInfo.userId } )
-
-                        _ ->
-                            ( model, Cmd.none )
+                ( Just scratch, _ ) ->
+                    ( model, insertScratch { data = encodeScratch scratch, userId = sessionInfo.userId } )
 
                 _ ->
                     ( model, Cmd.none )
 
         RecalculateSuccess id ->
-            case model of
-                Initialized mdl ->
-                    case toScratch mdl.editingScratch of
-                        Just scratch ->
-                            ( Initialized { mdl | scratch = RemoteData.map (always (Just ( scratch, id ))) mdl.scratch }, Cmd.none )
+            case toScratch model.editingScratch of
+                Just scratch ->
+                    ( { model | scratch = RemoteData.map (always (Just ( scratch, id ))) model.scratch }, Cmd.none )
 
-                        Nothing ->
-                            ( model, Cmd.none )
-
-                Initializing ->
+                Nothing ->
                     ( model, Cmd.none )
 
         RecalculateFailed _ ->
-            case model of
-                Initialized mdl ->
-                    ( mdl, Cmd.none )
-                        |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was an issue recalculating, please try again." ] }
-                        |> Tuple.mapFirst Initialized
-
-                _ ->
-                    ( model, Cmd.none )
+            ( model, Cmd.none )
+                |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was an issue recalculating, please try again." ] }
 
         DefinitionsFetched results ->
-            case model of
-                Initialized mdl ->
-                    ( { mdl | definitions = RemoteData.fromResult results }, Cmd.none )
-                        |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> isError results) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
-                        |> Tuple.mapFirst Initialized
-
-                Initializing ->
-                    ( model, Cmd.none )
+            ( { model | definitions = RemoteData.fromResult results }, Cmd.none )
+                |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> isError results) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
 
         ScratchFetched scratch ->
-            case model of
-                Initialized mdl ->
-                    let
-                        ( newScratch, editingScratch ) =
-                            case scratch of
-                                Ok Nothing ->
-                                    ( RemoteData.Success Nothing, defaultScratch mdl.today )
+            let
+                ( newScratch, editingScratch ) =
+                    case scratch of
+                        Ok Nothing ->
+                            ( RemoteData.Success Nothing, defaultScratch model.today )
 
-                                Ok (Just s) ->
-                                    ( RemoteData.Success (Just s), Tuple.first s )
+                        Ok (Just s) ->
+                            ( RemoteData.Success (Just s), Tuple.first s )
 
-                                Err err ->
-                                    ( RemoteData.Failure err, defaultScratch mdl.today )
-                    in
-                    ( { mdl
-                        | scratch = newScratch
-                        , editingScratch = toEditingScratch editingScratch
-                      }
-                    , Cmd.none
-                    )
-                        |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> RemoteData.isFailure newScratch) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
-                        |> Tuple.mapFirst Initialized
-
-                Initializing ->
-                    ( model, Cmd.none )
+                        Err err ->
+                            ( RemoteData.Failure err, defaultScratch model.today )
+            in
+            ( { model
+                | scratch = newScratch
+                , editingScratch = toEditingScratch editingScratch
+              }
+            , Cmd.none
+            )
+                |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> RemoteData.isFailure newScratch) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
 
         ArchiveFetched results ->
-            case model of
-                Initialized mdl ->
-                    ( { mdl | archive = RemoteData.fromResult results }, Cmd.none )
-                        |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> isError results) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
-                        |> Tuple.mapFirst Initialized
-
-                Initializing ->
-                    ( model, Cmd.none )
+            ( { model | archive = RemoteData.fromResult results }, Cmd.none )
+                |> Toasty.addToastIf Toast.toastyConfig ToastyMsg (\_ -> isError results) { severity = Toast.Error, message = Html.span [] [ Html.text "There was an error fetching results. Please refresh the page." ] }
 
         ScratchDateUpdated str ->
-            case model of
-                Initialized mdl ->
-                    let
-                        editingScratch =
-                            mdl.editingScratch
-                    in
-                    ( Initialized
-                        { mdl
-                            | editingScratch =
-                                { editingScratch
-                                    | endDate = str
-                                }
-                        }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+            let
+                editingScratch =
+                    model.editingScratch
+            in
+            ( { model
+                | editingScratch =
+                    { editingScratch
+                        | endDate = str
+                    }
+              }
+            , Cmd.none
+            )
 
         ScratchAmountInBankUpdated str ->
-            case model of
-                Initialized mdl ->
-                    let
-                        editingScratch =
-                            mdl.editingScratch
-                    in
-                    ( Initialized
-                        { mdl
-                            | editingScratch =
-                                { editingScratch
-                                    | amountInBank = str
-                                }
-                        }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+            let
+                editingScratch =
+                    model.editingScratch
+            in
+            ( { model
+                | editingScratch =
+                    { editingScratch
+                        | amountInBank = str
+                    }
+              }
+            , Cmd.none
+            )
 
         ScratchAmountLeftOverUpdated str ->
-            case model of
-                Initialized mdl ->
-                    let
-                        editingScratch =
-                            mdl.editingScratch
-                    in
-                    ( Initialized
-                        { mdl
-                            | editingScratch =
-                                { editingScratch
-                                    | amountLeftOver = str
-                                }
-                        }
-                    , Cmd.none
-                    )
-
-                _ ->
-                    ( model, Cmd.none )
+            let
+                editingScratch =
+                    model.editingScratch
+            in
+            ( { model
+                | editingScratch =
+                    { editingScratch
+                        | amountLeftOver = str
+                    }
+              }
+            , Cmd.none
+            )
 
         InsertArchiveSuccess archive ->
-            case model of
-                Initialized mdl ->
-                    ( { mdl | archive = RemoteData.map (\a -> archive :: a) mdl.archive }, Cmd.none )
-                        |> Tuple.mapFirst Initialized
-
-                _ ->
-                    ( model, Cmd.none )
+            ( { model | archive = RemoteData.map (\a -> archive :: a) model.archive }, Cmd.none )
 
         InsertArchiveFailed _ ->
-            case model of
-                Initialized mdl ->
-                    ( mdl, Cmd.none )
-                        |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was a problem executing the action. Please try again." ] }
-                        |> Tuple.mapFirst Initialized
-
-                _ ->
-                    ( model, Cmd.none )
+            ( model, Cmd.none )
+                |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was a problem executing the action. Please try again." ] }
 
         ToastyMsg subMsg ->
-            case model of
-                Initialized mdl ->
-                    let
-                        ( newMdl, newCmd ) =
-                            Toasty.update Toast.toastyConfig ToastyMsg subMsg mdl
-                    in
-                    ( Initialized newMdl, newCmd )
-
-                _ ->
-                    ( model, Cmd.none )
+            Toasty.update Toast.toastyConfig ToastyMsg subMsg model
 
 
 subscriptions : Model -> Sub Msg
@@ -307,7 +217,7 @@ subscriptions _ =
                     Err _ ->
                         DefinitionsFetched (Err "Couldn't convert from DB to app types")
             )
-        , fetchDefinitionsFailure (\err -> DefinitionsFetched (Err err))
+        , fetchDefinitionsFailure (DefinitionsFetched << Err)
         , fetchScratchSuccess
             (\raw ->
                 case raw of
@@ -348,7 +258,7 @@ subscriptions _ =
         ]
 
 
-getItemsAndScratch : HomePageModel -> RemoteData String ( List Item, Scratch )
+getItemsAndScratch : Model -> RemoteData String ( List Item, Scratch )
 getItemsAndScratch model =
     RemoteData.map3
         (\defs s archive ->
@@ -369,43 +279,28 @@ getItemsAndScratch model =
 
 
 itemsSection : Model -> Html Msg
-itemsSection mdl =
-    case mdl of
-        Initializing ->
-            Html.div [] []
+itemsSection model =
+    let
+        content =
+            case RemoteData.map Tuple.first (getItemsAndScratch model) of
+                RemoteData.Success items ->
+                    if List.isEmpty items then
+                        [ Html.div [] [ Html.text "No items to display!" ] ]
 
-        Initialized model ->
-            let
-                content =
-                    case RemoteData.map Tuple.first (getItemsAndScratch model) of
-                        RemoteData.Success items ->
-                            if List.isEmpty items then
-                                [ Html.div [] [ Html.text "No items to display!" ] ]
+                    else
+                        items
+                            |> List.map renderItem
 
-                            else
-                                items
-                                    |> List.map renderItem
+                RemoteData.NotAsked ->
+                    []
 
-                        RemoteData.NotAsked ->
-                            []
+                RemoteData.Loading ->
+                    []
 
-                        RemoteData.Loading ->
-                            []
-
-                        RemoteData.Failure _ ->
-                            []
-            in
-            Html.node "main" [ Attr.class "flex flex-col space-y-4" ] content
-
-
-formatAmount : Float -> String
-formatAmount =
-    Numeral.format "$0,0.00"
-
-
-formatDate : Date -> String
-formatDate =
-    Date.format "Y-MM-dd"
+                RemoteData.Failure _ ->
+                    []
+    in
+    Html.node "main" [ Attr.class "flex flex-col space-y-4" ] content
 
 
 renderItem : Item -> Html Msg
@@ -443,64 +338,59 @@ renderItem item =
 
 
 scratchArea : Model -> Html Msg
-scratchArea mdl =
-    case mdl of
-        Initializing ->
-            Html.aside [] []
-
-        Initialized model ->
-            case getItemsAndScratch model of
-                RemoteData.Success ( items, scratch ) ->
-                    let
-                        results =
-                            computeResults items scratch
-                    in
-                    Html.aside [ Attr.class "prose flex flex-col space-y-4 min-w-[320px]" ]
-                        [ Html.form
-                            [ Attr.class "flex flex-col space-y-4"
-                            , Events.onSubmit RecalculateTotals
-                            ]
-                            [ Html.input
-                                [ Attr.class "input input-bordered w-full max-w-xs"
-                                , Attr.type_ "date"
-                                , Attr.value model.editingScratch.endDate
-                                , Events.onInput ScratchDateUpdated
-                                ]
-                                []
-                            , Html.input
-                                [ Attr.class "input input-bordered w-full max-w-xs"
-                                , Attr.placeholder "Amount in account"
-                                , Attr.value model.editingScratch.amountInBank
-                                , Events.onInput ScratchAmountInBankUpdated
-                                ]
-                                []
-                            , Html.input
-                                [ Attr.class "input input-bordered w-full max-w-xs"
-                                , Attr.placeholder "Amount to be left over"
-                                , Attr.value model.editingScratch.amountLeftOver
-                                , Events.onInput ScratchAmountLeftOverUpdated
-                                ]
-                                []
-                            , Html.button
-                                [ Attr.class "btn btn-primary"
-                                , Attr.type_ "submit"
-                                ]
-                                [ Html.text "Recalculate" ]
-                            ]
-                        , Html.div []
-                            [ Html.h3 [ Attr.class "flex justify-between" ]
-                                [ Html.span [] [ Html.text "Total Owing: " ]
-                                , Html.span [] [ results.totalOwing |> formatAmount |> Html.text ]
-                                ]
-                            , Html.h3 [ Attr.class "flex justify-between" ]
-                                [ Html.span [] [ Html.text "Total Outstanding: " ]
-                                , Html.span [] [ results.totalOutstanding |> formatAmount |> Html.text ]
-                                ]
-                            ]
+scratchArea model =
+    case getItemsAndScratch model of
+        RemoteData.Success ( items, scratch ) ->
+            let
+                results =
+                    computeResults items scratch
+            in
+            Html.aside [ Attr.class "prose flex flex-col space-y-4 min-w-[320px]" ]
+                [ Html.form
+                    [ Attr.class "flex flex-col space-y-4"
+                    , Events.onSubmit RecalculateTotals
+                    ]
+                    [ Html.input
+                        [ Attr.class "input input-bordered w-full max-w-xs"
+                        , Attr.type_ "date"
+                        , Attr.value model.editingScratch.endDate
+                        , Events.onInput ScratchDateUpdated
                         ]
+                        []
+                    , Html.input
+                        [ Attr.class "input input-bordered w-full max-w-xs"
+                        , Attr.placeholder "Amount in account"
+                        , Attr.value model.editingScratch.amountInBank
+                        , Events.onInput ScratchAmountInBankUpdated
+                        ]
+                        []
+                    , Html.input
+                        [ Attr.class "input input-bordered w-full max-w-xs"
+                        , Attr.placeholder "Amount to be left over"
+                        , Attr.value model.editingScratch.amountLeftOver
+                        , Events.onInput ScratchAmountLeftOverUpdated
+                        ]
+                        []
+                    , Html.button
+                        [ Attr.class "btn btn-primary"
+                        , Attr.type_ "submit"
+                        ]
+                        [ Html.text "Recalculate" ]
+                    ]
+                , Html.div []
+                    [ Html.h3 [ Attr.class "flex justify-between" ]
+                        [ Html.span [] [ Html.text "Total Owing: " ]
+                        , Html.span [] [ results.totalOwing |> formatAmount |> Html.text ]
+                        ]
+                    , Html.h3 [ Attr.class "flex justify-between" ]
+                        [ Html.span [] [ Html.text "Total Outstanding: " ]
+                        , Html.span [] [ results.totalOutstanding |> formatAmount |> Html.text ]
+                        ]
+                    ]
+                ]
 
-                _ ->
-                    Html.aside [] []
+        _ ->
+            Html.aside [] []
 
 
 view : Model -> Html Msg
@@ -514,11 +404,6 @@ view model =
             , scratchArea model
             ]
         , Html.div [ Attr.class "toast toast-top toast-center" ]
-            [ case model of
-                Initialized mdl ->
-                    Toasty.view Toast.toastyConfig Toast.renderToast ToastyMsg mdl.toasties
-
-                _ ->
-                    Html.text ""
+            [ Toasty.view Toast.toastyConfig Toast.renderToast ToastyMsg model.toasties
             ]
         ]

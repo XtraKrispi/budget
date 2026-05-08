@@ -2,7 +2,6 @@ port module Ports.Scratch exposing (..)
 
 import Json.Decode as Decode
 import Json.Encode as Encode
-import Types exposing (Scratch)
 
 
 port fetchScratch : () -> Cmd msg

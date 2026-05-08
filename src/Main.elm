@@ -1,8 +1,10 @@
 module Main exposing (main)
 
+import Admin.DefinitionsPage as DefinitionsPage
 import Browser
 import Browser.Navigation as Nav
 import BusinessLogic exposing (sessionInfoDecoder)
+import Date exposing (Date, fromCalendarDate, today)
 import HomePage
 import Html exposing (..)
 import Json.Decode as Decode
@@ -10,6 +12,8 @@ import LoginPage
 import Navbar
 import Ports.Auth as Auth exposing (initiateGetUser, loggedOut, logout)
 import Route exposing (Route(..), routeParser)
+import Task
+import Time exposing (Month(..))
 import Types exposing (SessionInfo)
 import Url
 import Url.Parser
@@ -30,11 +34,13 @@ main =
 type Page
     = LoginPage LoginPage.Model
     | HomePage HomePage.Model
+    | DefinitionsPage DefinitionsPage.Model
     | NotFoundPage
 
 
 type Model
-    = Initializing { key : Nav.Key, route : Route }
+    = FetchingToday { key : Nav.Key, route : Route }
+    | Initializing { key : Nav.Key, route : Route, today : Date }
     | Initialized AppModel
 
 
@@ -43,42 +49,55 @@ type alias AppModel =
     , route : Route
     , page : Page
     , session : Maybe SessionInfo
+    , today : Date
     }
 
 
-routeInit : Nav.Key -> Route -> Maybe SessionInfo -> ( Model, Cmd Msg )
-routeInit key route mSessionInfo =
+routeInit : Nav.Key -> Route -> Date -> Maybe SessionInfo -> ( Model, Cmd Msg )
+routeInit key route today mSessionInfo =
     case ( route, mSessionInfo ) of
         ( ArchiveR, Just session ) ->
             let
                 ( loginPageModel, loginPageCmd ) =
                     LoginPage.init
             in
-            ( Initialized (AppModel key route (LoginPage loginPageModel) (Just session)), Cmd.map LoginPageMsg loginPageCmd )
+            ( Initialized (AppModel key route (LoginPage loginPageModel) (Just session) today), Cmd.map LoginPageMsg loginPageCmd )
 
         ( HomeR, Just session ) ->
             let
                 ( homePageModel, homePageCmd ) =
-                    HomePage.init
+                    HomePage.init today
             in
-            ( Initialized (AppModel key route (HomePage homePageModel) (Just session)), Cmd.map HomePageMsg homePageCmd )
+            ( Initialized (AppModel key route (HomePage homePageModel) (Just session) today), Cmd.map HomePageMsg homePageCmd )
+
+        ( DefinitionAdminR, Just session ) ->
+            let
+                ( defModel, defCmd ) =
+                    DefinitionsPage.init today
+            in
+            ( Initialized (AppModel key route (DefinitionsPage defModel) (Just session) today), Cmd.map DefinitionsPageMsg defCmd )
 
         ( NotFoundR, _ ) ->
-            ( Initialized (AppModel key route NotFoundPage Nothing), Cmd.none )
+            ( Initialized (AppModel key route NotFoundPage Nothing today), Cmd.none )
 
         ( LoginR, _ ) ->
             let
                 ( loginPageModel, loginPageCmd ) =
                     LoginPage.init
             in
-            ( Initialized (AppModel key route (LoginPage loginPageModel) Nothing), Cmd.batch [ Cmd.map LoginPageMsg loginPageCmd ] )
+            ( Initialized (AppModel key route (LoginPage loginPageModel) Nothing today), Cmd.batch [ Cmd.map LoginPageMsg loginPageCmd ] )
 
         _ ->
             let
                 ( loginPageModel, loginPageCmd ) =
                     LoginPage.init
             in
-            ( Initialized (AppModel key route (LoginPage loginPageModel) Nothing), Cmd.batch [ Nav.pushUrl key "/login", Cmd.map LoginPageMsg loginPageCmd ] )
+            ( Initialized (AppModel key route (LoginPage loginPageModel) Nothing today), Cmd.batch [ Nav.pushUrl key "/login", Cmd.map LoginPageMsg loginPageCmd ] )
+
+
+defaultDate : Date
+defaultDate =
+    fromCalendarDate 1 Jan 1
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -90,19 +109,24 @@ init _ url key =
                 , route = NotFoundR
                 , page = NotFoundPage
                 , session = Nothing
+                , today = defaultDate
                 }
             , Cmd.none
             )
 
         Just route ->
-            ( Initializing { key = key, route = route }, initiateGetUser () )
+            ( FetchingToday { key = key, route = route }
+            , Task.perform GotToday today
+            )
 
 
 type Msg
     = UrlRequested Browser.UrlRequest
     | UrlChanged Url.Url
+    | GotToday Date
     | LoginPageMsg LoginPage.Msg
     | HomePageMsg HomePage.Msg
+    | DefinitionsPageMsg DefinitionsPage.Msg
     | GotUser (Maybe SessionInfo)
     | Logout
     | LoggedOut
@@ -111,6 +135,9 @@ type Msg
 getKeyAndSession : Model -> ( Nav.Key, Maybe SessionInfo )
 getKeyAndSession model =
     case model of
+        FetchingToday { key } ->
+            ( key, Nothing )
+
         Initializing { key } ->
             ( key, Nothing )
 
@@ -140,10 +167,26 @@ update msg model =
             in
             case Url.Parser.parse routeParser url of
                 Nothing ->
-                    ( Initialized (AppModel key NotFoundR NotFoundPage session), Cmd.none )
+                    ( Initialized (AppModel key NotFoundR NotFoundPage session defaultDate), Cmd.none )
 
                 Just val ->
-                    routeInit key val session
+                    case model of
+                        Initialized mdl ->
+                            routeInit key val mdl.today session
+
+                        Initializing mdl ->
+                            routeInit key val mdl.today session
+
+                        FetchingToday _ ->
+                            ( model, Cmd.none )
+
+        GotToday today ->
+            case model of
+                FetchingToday { key, route } ->
+                    ( Initializing { key = key, route = route, today = today }, initiateGetUser () )
+
+                _ ->
+                    ( model, Cmd.none )
 
         HomePageMsg hpm ->
             case model of
@@ -162,15 +205,37 @@ update msg model =
                 _ ->
                     ( model, Cmd.none )
 
-        LoginPageMsg (LoginPage.LoginSucceeded sessionInfo) ->
-            let
-                ( key, _ ) =
-                    getKeyAndSession model
+        DefinitionsPageMsg dpm ->
+            case model of
+                Initialized appModel ->
+                    case ( appModel.page, appModel.session ) of
+                        ( DefinitionsPage mdl, Just _ ) ->
+                            let
+                                ( newMdl, cmd ) =
+                                    DefinitionsPage.update dpm mdl
+                            in
+                            ( Initialized { appModel | page = DefinitionsPage newMdl }, Cmd.map DefinitionsPageMsg cmd )
 
-                ( newModel, cmd ) =
-                    routeInit key HomeR (Just sessionInfo)
-            in
-            ( newModel, Cmd.batch [ Nav.pushUrl key "/", cmd ] )
+                        _ ->
+                            ( model, Cmd.none )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        LoginPageMsg (LoginPage.LoginSucceeded sessionInfo) ->
+            case model of
+                Initialized mdl ->
+                    let
+                        ( key, _ ) =
+                            getKeyAndSession model
+
+                        ( newModel, cmd ) =
+                            routeInit key HomeR mdl.today (Just sessionInfo)
+                    in
+                    ( newModel, Cmd.batch [ Nav.pushUrl key "/", cmd ] )
+
+                _ ->
+                    ( model, Cmd.none )
 
         LoginPageMsg lpm ->
             case model of
@@ -196,8 +261,8 @@ update msg model =
 
         GotUser user ->
             case model of
-                Initializing { key, route } ->
-                    routeInit key route user
+                Initializing { key, route, today } ->
+                    routeInit key route today user
 
                 _ ->
                     ( model, Cmd.none )
@@ -214,6 +279,9 @@ subscriptions model =
     Sub.batch
         [ loggedOut (\_ -> LoggedOut)
         , case model of
+            FetchingToday _ ->
+                Sub.none
+
             Initializing _ ->
                 Auth.gotUser
                     (\mVal ->
@@ -238,6 +306,9 @@ subscriptions model =
                     HomePage mdl ->
                         Sub.map HomePageMsg (HomePage.subscriptions mdl)
 
+                    DefinitionsPage mdl ->
+                        Sub.map DefinitionsPageMsg (DefinitionsPage.subscriptions mdl)
+
                     NotFoundPage ->
                         Sub.none
         ]
@@ -248,6 +319,9 @@ view model =
     { title = "Budget"
     , body =
         case model of
+            FetchingToday _ ->
+                [ Html.div [] [] ]
+
             Initializing _ ->
                 [ Html.div [] [] ]
 
@@ -258,6 +332,9 @@ view model =
 
                     HomePage mdl ->
                         [ Navbar.navbar Logout appModel.route, Html.map HomePageMsg (HomePage.view mdl) ]
+
+                    DefinitionsPage mdl ->
+                        [ Navbar.navbar Logout appModel.route, Html.map DefinitionsPageMsg (DefinitionsPage.view mdl) ]
 
                     NotFoundPage ->
                         [ Html.div [] [] ]

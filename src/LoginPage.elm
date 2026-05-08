@@ -10,6 +10,7 @@ import Ports.Dialog as Dialog
 import Svg
 import Svg.Attributes as SA
 import Types exposing (SessionInfo)
+import View.Common exposing (dialogCloseButton)
 
 
 type alias Model =
@@ -124,7 +125,7 @@ view model =
                 [ Html.node "dialog"
                     [ Attr.class "modal", Attr.id "registration-dialog" ]
                     [ Html.div [ Attr.class "modal-box" ]
-                        [ closeButton
+                        [ dialogCloseButton
                         , Html.h3 [ Attr.class "font-bold text-lg" ]
                             [ Html.text "Sign Up"
                             ]
@@ -181,28 +182,6 @@ view model =
                             ]
                         ]
                     ]
-                ]
-            ]
-        ]
-
-
-closeButton : Html msg
-closeButton =
-    Html.form [ Attr.method "dialog" ]
-        [ Html.button [ Attr.class "btn btn-sm btn-circle btn-ghost absolute right-2 top-2" ]
-            [ Svg.svg
-                [ SA.class "h-6 w-6"
-                , SA.fill "none"
-                , SA.viewBox "0 0 24 24"
-                ]
-                [ Svg.path
-                    [ SA.stroke "currentColor"
-                    , SA.strokeLinecap "round"
-                    , SA.strokeLinejoin "round"
-                    , SA.strokeWidth "2"
-                    , SA.d "M6 18 17.94 6M18 18 6.06 6"
-                    ]
-                    []
                 ]
             ]
         ]
