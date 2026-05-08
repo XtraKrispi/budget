@@ -12,7 +12,6 @@ import Ports.Clipboard exposing (copyToClipboard)
 import Ports.Definitions exposing (fetchDefinitions, fetchDefinitionsFailure, fetchDefinitionsSuccess)
 import Ports.Scratch exposing (fetchScratch, fetchScratchFailure, fetchScratchSuccess, insertScratch, saveScratchFailure, saveScratchSuccess, updateScratch)
 import RemoteData exposing (RemoteData)
-import Task
 import Toast exposing (Toast)
 import Toasty
 import Types exposing (Archive, ArchiveAction(..), Definition, Item, Scratch, SessionInfo)
@@ -295,7 +294,7 @@ itemsSection model =
                     []
 
                 RemoteData.Loading ->
-                    []
+                    [ Html.text "Loading" ]
 
                 RemoteData.Failure _ ->
                     []
@@ -340,6 +339,9 @@ renderItem item =
 scratchArea : Model -> Html Msg
 scratchArea model =
     case getItemsAndScratch model of
+        RemoteData.Loading ->
+            Html.aside [] [ Html.text "Loading" ]
+
         RemoteData.Success ( items, scratch ) ->
             let
                 results =
