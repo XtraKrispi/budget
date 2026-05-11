@@ -6,7 +6,9 @@ import Html.Attributes as Attr
 import Html.Events as Events
 import Json.Decode as Decode
 import Ports.Auth as Auth exposing (signIn, signUp)
-import Ports.Dialog as Dialog
+import Ports.Dialog as Dialog exposing (closeDialog)
+import Toast exposing (Toast)
+import Toasty
 import Types exposing (SessionInfo)
 import View.Common exposing (dialogCloseButton)
 
@@ -17,6 +19,7 @@ type alias Model =
     , registrationPasswordConfirmation : String
     , loginEmail : String
     , loginPassword : String
+    , toasties : Toasty.Stack (Toast Msg)
     }
 
 
@@ -27,6 +30,7 @@ init =
       , registrationPasswordConfirmation = ""
       , loginEmail = ""
       , loginPassword = ""
+      , toasties = Toasty.initialState
       }
     , Cmd.none
     )
@@ -45,6 +49,7 @@ type Msg
     | Login
     | LoginSucceeded SessionInfo
     | LoginFailed String
+    | ToastyMsg (Toasty.Msg (Toast Msg))
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -65,13 +70,19 @@ update msg model =
         RegistrationPasswordConfirmationUpdated txt ->
             ( { model | registrationPasswordConfirmation = txt }, Cmd.none )
 
-        SignUpSucceeded str ->
-            -- TODO: Close modal, bring up a toast?
-            ( model, Cmd.none )
+        SignUpSucceeded _ ->
+            ( { model
+                | registrationEmail = ""
+                , registrationPassword = ""
+                , registrationPasswordConfirmation = ""
+              }
+            , closeDialog "registration-dialog"
+            )
+                |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Success, message = Html.span [] [ Html.text "You have successfully signed up. Please confirm your email and sign in." ] }
 
-        SignUpFailed str ->
-            -- TODO : Toast?
+        SignUpFailed _ ->
             ( model, Cmd.none )
+                |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was a problem signing up. Please try again." ] }
 
         LoginEmailUpdated str ->
             ( { model | loginEmail = str }, Cmd.none )
@@ -90,9 +101,12 @@ update msg model =
         LoginSucceeded _ ->
             ( model, Cmd.none )
 
-        LoginFailed err ->
-            -- TODO: Toast
+        LoginFailed _ ->
             ( model, Cmd.none )
+                |> Toasty.addToast Toast.toastyConfig ToastyMsg { severity = Toast.Error, message = Html.span [] [ Html.text "There was a problem logging in. Please try again." ] }
+
+        ToastyMsg subMsg ->
+            Toasty.update Toast.toastyConfig ToastyMsg subMsg model
 
 
 decodeSessionInfo : (SessionInfo -> msg) -> (String -> msg) -> Decode.Value -> msg
@@ -112,6 +126,58 @@ subscriptions _ =
         , Auth.onSignUpFailure SignUpFailed
         , Auth.onLoginSuccess (decodeSessionInfo LoginSucceeded LoginFailed)
         , Auth.onLoginFailure LoginFailed
+        ]
+
+
+registrationForm : Model -> Html Msg
+registrationForm model =
+    Html.form [ Attr.class "flex flex-col space-y-2", Events.onSubmit SignUp ]
+        [ Html.div [ Attr.class "form-control w-full max-w-xs mt-2" ]
+            [ Html.input
+                [ Attr.class "input w-full max-w-xs grow"
+                , Attr.placeholder "Email"
+                , Attr.type_ "email"
+                , Attr.required True
+                , Attr.value model.registrationEmail
+                , Events.onInput RegistrationEmailUpdated
+                ]
+                []
+            ]
+        , Html.div []
+            [ Html.div [ Attr.class "form-control w-full max-w-xs" ]
+                [ Html.input
+                    [ Attr.class "input w-full max-w-xs grow"
+                    , Attr.placeholder "Password"
+                    , Attr.type_ "password"
+                    , Attr.required True
+                    , Attr.value model.registrationPassword
+                    , Events.onInput RegistrationPasswordUpdated
+                    ]
+                    []
+                ]
+            , Html.div [ Attr.class "form-control w-full max-w-xs mt-2" ]
+                [ Html.input
+                    [ Attr.class "input w-full max-w-xs grow"
+                    , Attr.placeholder "Password Confirmation"
+                    , Attr.type_ "password"
+                    , Attr.required True
+                    , Attr.value model.registrationPasswordConfirmation
+                    , Events.onInput RegistrationPasswordConfirmationUpdated
+                    ]
+                    []
+                ]
+            , Html.div [ Attr.class "label", Attr.classList [ ( "invisible", model.registrationPassword == model.registrationPasswordConfirmation ) ] ]
+                [ Html.span [ Attr.class "text-xs text-error" ] [ Html.text "Passwords do not match" ]
+                ]
+            ]
+        , Html.div [ Attr.class "modal-action" ]
+            [ Html.button
+                [ Attr.class "btn btn-primary"
+                , Attr.type_ "submit"
+                , Attr.disabled (model.registrationPassword /= model.registrationPasswordConfirmation)
+                ]
+                [ Html.text "Sign Up" ]
+            ]
         ]
 
 
@@ -185,56 +251,7 @@ view model =
                     ]
                 ]
             ]
-        ]
-
-
-registrationForm : Model -> Html Msg
-registrationForm model =
-    Html.form [ Attr.class "flex flex-col space-y-2", Events.onSubmit SignUp ]
-        [ Html.div [ Attr.class "form-control w-full max-w-xs mt-2" ]
-            [ Html.input
-                [ Attr.class "input w-full max-w-xs grow"
-                , Attr.placeholder "Email"
-                , Attr.type_ "email"
-                , Attr.required True
-                , Attr.value model.registrationEmail
-                , Events.onInput RegistrationEmailUpdated
-                ]
-                []
-            ]
-        , Html.div []
-            [ Html.div [ Attr.class "form-control w-full max-w-xs" ]
-                [ Html.input
-                    [ Attr.class "input w-full max-w-xs grow"
-                    , Attr.placeholder "Password"
-                    , Attr.type_ "password"
-                    , Attr.required True
-                    , Attr.value model.registrationPassword
-                    , Events.onInput RegistrationPasswordUpdated
-                    ]
-                    []
-                ]
-            , Html.div [ Attr.class "form-control w-full max-w-xs mt-2" ]
-                [ Html.input
-                    [ Attr.class "input w-full max-w-xs grow"
-                    , Attr.placeholder "Password Confirmation"
-                    , Attr.type_ "password"
-                    , Attr.required True
-                    , Attr.value model.registrationPasswordConfirmation
-                    , Events.onInput RegistrationPasswordConfirmationUpdated
-                    ]
-                    []
-                ]
-            , Html.div [ Attr.class "label", Attr.classList [ ( "invisible", model.registrationPassword == model.registrationPasswordConfirmation ) ] ]
-                [ Html.span [ Attr.class "text-xs text-error" ] [ Html.text "Passwords do not match" ]
-                ]
-            ]
-        , Html.div [ Attr.class "modal-action" ]
-            [ Html.button
-                [ Attr.class "btn btn-primary"
-                , Attr.type_ "submit"
-                , Attr.disabled (model.registrationPassword /= model.registrationPasswordConfirmation)
-                ]
-                [ Html.text "Sign Up" ]
+        , Html.div [ Attr.class "toast toast-top toast-center" ]
+            [ Toasty.view Toast.toastyConfig Toast.renderToast ToastyMsg model.toasties
             ]
         ]
