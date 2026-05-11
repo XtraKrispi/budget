@@ -32,7 +32,13 @@ extractDatesForDefinition : Date -> Definition -> List Date
 extractDatesForDefinition endDate def =
     let
         go date =
-            if Date.toRataDie date <= Date.toRataDie endDate then
+            if
+                (Maybe.map (\ed -> Date.toRataDie date <= Date.toRataDie ed) def.endDate
+                    |> Maybe.withDefault True
+                )
+                    && Date.toRataDie date
+                    <= Date.toRataDie endDate
+            then
                 case def.frequency of
                     OneTime ->
                         [ date ]
