@@ -95,7 +95,7 @@ routeInit key route today mSessionInfo =
                 ( loginPageModel, loginPageCmd ) =
                     LoginPage.init
             in
-            ( Initialized (AppModel key route (LoginPage loginPageModel) Nothing today), Cmd.batch [ Nav.pushUrl key "/login", Cmd.map LoginPageMsg loginPageCmd ] )
+            ( Initialized (AppModel key route (LoginPage loginPageModel) Nothing today), Cmd.batch [ Nav.pushUrl key "#/login", Cmd.map LoginPageMsg loginPageCmd ] )
 
 
 defaultDate : Date
@@ -253,7 +253,7 @@ update msg model =
                         ( newModel, cmd ) =
                             routeInit key HomeR mdl.today (Just sessionInfo)
                     in
-                    ( newModel, Cmd.batch [ Nav.pushUrl key "/", cmd ] )
+                    ( newModel, Cmd.batch [ Nav.pushUrl key "#/", cmd ] )
 
                 _ ->
                     ( model, Cmd.none )
