@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "tailwind:dev": "npx @tailwindcss/cli -i ./src/input.css -o ./public/app.css --watch",
-    "server:dev": "parcel index.html"
+    "server:dev": "parcel index.html",
+    "build": "npx @tailwindcss/cli -i ./src/input.css -o ./public/app.css && parcel build index.html"
   },
   "keywords": [],
   "author": "",
