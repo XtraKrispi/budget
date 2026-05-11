@@ -363,5 +363,5 @@ view model =
                         [ Navbar.navbar Logout appModel.route, Html.map ArchivePageMsg (ArchivePage.view mdl) ]
 
                     NotFoundPage ->
-                        [ Html.div [] [] ]
+                        [ Html.div [] [ Html.text "Not Found" ] ]
     }

@@ -4,7 +4,7 @@
   "scripts": {
     "tailwind:dev": "npx @tailwindcss/cli -i ./src/input.css -o ./public/app.css --watch",
     "server:dev": "parcel index.html",
-    "build": "npx @tailwindcss/cli -i ./src/input.css -o ./public/app.css && parcel build index.html --public-url 'https://xtrakrispi.github.io/budget/'"
+    "build": "npx @tailwindcss/cli -i ./src/input.css -o ./public/app.css && parcel build index.html --public-url ./"
   },
   "keywords": [],
   "author": "",
