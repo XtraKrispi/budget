@@ -23,18 +23,20 @@ routeParser =
 
 toUrl : Route -> String
 toUrl route =
-    case route of
-        HomeR ->
-            "/"
+    "#"
+        ++ (case route of
+                HomeR ->
+                    "/"
 
-        LoginR ->
-            "/login"
+                LoginR ->
+                    "/login"
 
-        DefinitionAdminR ->
-            "/admin/definitions"
+                DefinitionAdminR ->
+                    "/admin/definitions"
 
-        ArchiveR ->
-            "/archive"
+                ArchiveR ->
+                    "/archive"
 
-        NotFoundR ->
-            "/not-found"
+                NotFoundR ->
+                    "/not-found"
+           )

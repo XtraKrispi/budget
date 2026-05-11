@@ -18,6 +18,7 @@
             "elm-community/maybe-extra": "5.3.0",
             "justinmimbs/date": "4.1.0",
             "krisajenkins/remotedata": "6.1.0",
+            "mthadley/elm-hash-routing": "1.0.1",
             "myrho/numeral-elm": "1.0.2",
             "pablen/toasty": "1.2.0"
         },

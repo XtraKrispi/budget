@@ -3,6 +3,7 @@ module Main exposing (main)
 import Admin.DefinitionsPage as DefinitionsPage
 import ArchivePage
 import Browser
+import Browser.Hash
 import Browser.Navigation as Nav
 import BusinessLogic exposing (sessionInfoDecoder)
 import Date exposing (Date, fromCalendarDate, today)
@@ -22,7 +23,7 @@ import Url.Parser
 
 main : Program () Model Msg
 main =
-    Browser.application
+    Browser.Hash.application
         { init = init
         , view = view
         , update = update
