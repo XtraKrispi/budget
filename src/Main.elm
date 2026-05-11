@@ -292,7 +292,7 @@ update msg model =
             ( model, Cmd.batch [ logout () ] )
 
         LoggedOut ->
-            ( model, Nav.load "/" )
+            ( model, Nav.load "#/" )
 
 
 subscriptions : Model -> Sub Msg
