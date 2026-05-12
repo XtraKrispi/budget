@@ -23,7 +23,7 @@ import Url.Parser
 
 
 -- TODO : Better Mobile Handling
--- TODO : Deletes for definitions, so we can pull back less data
+--              Done for home page... do we use a dock instead of hamburger menu?
 
 
 main : Program () Model Msg

@@ -10,7 +10,7 @@ import Svg.Attributes as SvgAttr
 
 navbar : msg -> Route -> Html msg
 navbar onLogout route =
-    div [ class "navbar bg-base-100" ]
+    div [ class "navbar bg-base-100 w-screen" ]
         [ div [ class "navbar-start" ]
             [ div [ class "dropdown" ]
                 [ div

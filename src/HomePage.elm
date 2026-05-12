@@ -299,12 +299,12 @@ itemsSection model =
                 RemoteData.Failure _ ->
                     []
     in
-    Html.node "main" [ Attr.class "flex flex-col space-y-4" ] content
+    Html.node "main" [ Attr.class "flex flex-col space-y-4 w-full sm:w-auto" ] content
 
 
 renderItem : Item -> Html Msg
 renderItem item =
-    Html.div [ Attr.class "card w-96 bg-base-100 shadow-xl" ]
+    Html.div [ Attr.class "card w-full sm:w-96 bg-base-100 shadow-xl" ]
         [ Html.div [ Attr.class "card-body" ]
             [ Html.h2 [ Attr.class "card-title flex justify-between" ]
                 [ Html.span [] [ Html.text item.definition.description ]
@@ -397,13 +397,13 @@ scratchArea model =
 
 view : Model -> Html Msg
 view model =
-    Html.div [ Attr.class "px-20 py-10" ]
-        [ Html.header [ Attr.class "prose lg:prose-xl flex space-x-4" ]
+    Html.div [ Attr.class "w-screen sm:px-20 py-10" ]
+        [ Html.header [ Attr.class "prose px-4 sm:px-auto lg:prose-xl flex space-x-4" ]
             [ Html.h2 [] [ Html.text "Home" ]
             ]
-        , Html.div [ Attr.class "flex space-x-12 w-screen" ]
+        , Html.div [ Attr.class "flex space-x-12 flex-col-reverse w-screen sm:flex-row" ]
             [ itemsSection model
-            , scratchArea model
+            , Html.div [ Attr.class "p-4 sm:p-0" ] [ scratchArea model ]
             ]
         , Html.div [ Attr.class "toast toast-top toast-center" ]
             [ Toasty.view Toast.toastyConfig Toast.renderToast ToastyMsg model.toasties
