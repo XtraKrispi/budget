@@ -48,8 +48,8 @@ subscriptions _ =
 
 view : Model -> Html Msg
 view model =
-    Html.div [ Attr.class "px-20 py-10" ]
-        [ Html.header [ Attr.class "prose lg:prose-xl flex space-x-4" ]
+    Html.div [ Attr.class "w-screen sm:px-20 py-10" ]
+        [ Html.header [ Attr.class "prose px-4 sm:px-auto lg:prose-xl flex space-x-4" ]
             [ Html.h2 [] [ Html.text "Archive" ] ]
         , Html.node "main"
             [ Attr.class "prose flex flex-col space-y-4" ]
@@ -72,7 +72,7 @@ view model =
 
 renderArchiveItem : Archive -> Html Msg
 renderArchiveItem { description, amount, date, action } =
-    Html.div [ Attr.class "card w-96 bg-base-100 shadow-xl" ]
+    Html.div [ Attr.class "card w-full sm:w-96 bg-base-100 shadow-xl" ]
         [ Html.div [ Attr.class "card-body" ]
             [ Html.h2 [ Attr.class "card-title flex justify-between" ]
                 [ Html.span [] [ Html.text description ]
