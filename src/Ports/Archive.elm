@@ -12,7 +12,7 @@ port insertArchiveSuccess : (Encode.Value -> msg) -> Sub msg
 port insertArchiveFailure : (String -> msg) -> Sub msg
 
 
-port fetchArchive : () -> Cmd msg
+port fetchArchive : { includeDeletedDefinitions : Bool } -> Cmd msg
 
 
 port fetchArchiveSuccess : (Encode.Value -> msg) -> Sub msg

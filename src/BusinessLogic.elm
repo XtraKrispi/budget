@@ -114,13 +114,14 @@ encodeScratch scratch =
 
 definitionDecoder : Decode.Decoder ( Definition, Int )
 definitionDecoder =
-    Decode.map7 (\sd ed d a f auto id -> ( Definition sd ed d a f auto, id ))
+    Decode.map8 (\sd ed d a f auto isDeleted id -> ( Definition sd ed d a f auto isDeleted, id ))
         (Decode.field "startDate" dateDecoder)
         (Decode.field "endDate" (Decode.nullable dateDecoder))
         (Decode.field "description" Decode.string)
         (Decode.field "amount" Decode.float)
         (Decode.field "frequency" frequencyDecoder)
         (Decode.field "isAutomatic" Decode.bool)
+        (Decode.field "isDeleted" Decode.bool)
         (Decode.field "id" Decode.int)
 
 
@@ -137,6 +138,7 @@ encodeDefinition def =
         , ( "amount", Encode.float def.amount )
         , ( "frequency", Encode.string (frequencyString def.frequency) )
         , ( "isAutomatic", Encode.bool def.isAutomatic )
+        , ( "isDeleted", Encode.bool def.isDeleted )
         ]
 
 

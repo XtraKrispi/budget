@@ -62,9 +62,9 @@ init today =
       , toasties = Toasty.initialState
       }
     , Cmd.batch
-        [ fetchDefinitions ()
+        [ fetchDefinitions { includeDeleted = False }
         , fetchScratch ()
-        , fetchArchive ()
+        , fetchArchive { includeDeletedDefinitions = False }
         ]
     )
 

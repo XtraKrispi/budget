@@ -26,6 +26,7 @@ type alias EditingDefinition =
     , startDate : String
     , endDate : String
     , isAutomatic : Bool
+    , isDeleted : Bool
     , definitionId : Maybe Int
     }
 
@@ -38,6 +39,7 @@ defaultEditingDefinition today =
     , startDate = toIsoString today
     , endDate = ""
     , isAutomatic = False
+    , isDeleted = False
     , definitionId = Nothing
     }
 
@@ -53,6 +55,7 @@ mkEditingDefinition ( def, id ) =
             |> Maybe.map toIsoString
             |> Maybe.withDefault ""
     , isAutomatic = def.isAutomatic
+    , isDeleted = def.isDeleted
     , definitionId = Just id
     }
 
@@ -67,6 +70,7 @@ mkDefinition editingDefinition =
               , startDate = startDate
               , endDate = fromIsoString editingDefinition.endDate |> Result.toMaybe
               , isAutomatic = editingDefinition.isAutomatic
+              , isDeleted = editingDefinition.isDeleted
               }
             , editingDefinition.definitionId
             )
@@ -98,6 +102,7 @@ type Msg
     | SaveDefinitionFailed String
     | EditingDescriptionUpdated String
     | EditingIsAutomaticUpdated Bool
+    | EditingIsDeletedUpdated Bool
     | EditingAmountUpdated String
     | EditingFrequencyChanged String
     | EditingStartDateChanged String
@@ -112,7 +117,7 @@ init today =
       , definitions = RemoteData.Loading
       , editingDefinition = defaultEditingDefinition today
       }
-    , fetchDefinitions ()
+    , fetchDefinitions { includeDeleted = True }
     )
 
 
@@ -181,6 +186,13 @@ update sessionInfo msg model =
                     model.editingDefinition
             in
             ( { model | editingDefinition = { editingDefinition | isAutomatic = p } }, Cmd.none )
+
+        EditingIsDeletedUpdated p ->
+            let
+                editingDefinition =
+                    model.editingDefinition
+            in
+            ( { model | editingDefinition = { editingDefinition | isDeleted = p } }, Cmd.none )
 
         EditingAmountUpdated str ->
             let
@@ -275,6 +287,13 @@ renderDefinitionRow ( def, id ) =
                 |> Maybe.withDefault "--"
                 |> Html.text
             ]
+        , Html.td []
+            [ if def.isDeleted then
+                Html.text "Y"
+
+              else
+                Html.text "N"
+            ]
         ]
 
 
@@ -347,6 +366,22 @@ definitionsModal ( def, mId ) =
                     , Events.onInput EditingEndDateChanged
                     ]
                     []
+                , Html.div [ Attr.class "form-control" ]
+                    [ Html.button
+                        [ Attr.class "btn"
+                        , Attr.classList [ ( "btn-error", not def.isDeleted ), ( "btn-warning", def.isDeleted ) ]
+                        , Attr.type_ "button"
+                        , Events.onClick (EditingIsDeletedUpdated (not def.isDeleted))
+                        ]
+                        [ Html.text
+                            (if def.isDeleted then
+                                "Undelete"
+
+                             else
+                                "Delete"
+                            )
+                        ]
+                    ]
                 , Html.div [ Attr.class "modal-action" ]
                     [ Html.button
                         [ Attr.class "btn btn-primary"
@@ -432,6 +467,7 @@ view model =
                                     , Html.th [] [ Html.text "Frequency" ]
                                     , Html.th [] [ Html.text "Start Date" ]
                                     , Html.th [] [ Html.text "End Date" ]
+                                    , Html.th [] [ Html.text "Deleted?" ]
                                     ]
                                 ]
                             , s

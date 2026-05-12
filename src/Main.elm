@@ -21,6 +21,11 @@ import Url
 import Url.Parser
 
 
+
+-- TODO : Better Mobile Handling
+-- TODO : Deletes for definitions, so we can pull back less data
+
+
 main : Program () Model Msg
 main =
     Browser.Hash.application

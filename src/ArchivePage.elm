@@ -20,7 +20,7 @@ type Msg
 
 init : ( Model, Cmd Msg )
 init =
-    ( { archive = RemoteData.Loading }, fetchArchive () )
+    ( { archive = RemoteData.Loading }, fetchArchive { includeDeletedDefinitions = True } )
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )

@@ -24,6 +24,7 @@ type alias Definition =
     , amount : Float
     , frequency : Frequency
     , isAutomatic : Bool
+    , isDeleted : Bool
     }
 
 

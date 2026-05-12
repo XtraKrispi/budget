@@ -4,7 +4,7 @@ import Json.Decode as Decode
 import Json.Encode as Encode
 
 
-port fetchDefinitions : () -> Cmd msg
+port fetchDefinitions : { includeDeleted : Bool } -> Cmd msg
 
 
 port fetchDefinitionsSuccess : (Decode.Value -> msg) -> Sub msg
