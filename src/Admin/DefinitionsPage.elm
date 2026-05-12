@@ -518,4 +518,4 @@ cardView : List ( Definition, Int ) -> Html Msg
 cardView s =
     s
         |> List.map renderDefinitionCard
-        |> Html.div [ Attr.class "w-full" ]
+        |> Html.div [ Attr.class "w-full flex flex-col space-y-4 sm:w-auto" ]

@@ -2678,6 +2678,11 @@
       width: auto;
     }
   }
+  .sm\:max-w-xs {
+    @media (width >= 40rem) {
+      max-width: var(--container-xs);
+    }
+  }
   .sm\:flex-col-reverse {
     @media (width >= 40rem) {
       flex-direction: column-reverse;
@@ -2922,6 +2927,16 @@
   .lg\:hidden {
     @media (width >= 64rem) {
       display: none;
+    }
+  }
+  .lg\:w-auto {
+    @media (width >= 64rem) {
+      width: auto;
+    }
+  }
+  .lg\:min-w-\[320px\] {
+    @media (width >= 64rem) {
+      min-width: 320px;
     }
   }
   .lg\:flex-row {

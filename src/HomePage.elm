@@ -347,27 +347,27 @@ scratchArea model =
                 results =
                     computeResults items scratch
             in
-            Html.aside [ Attr.class "prose flex flex-col space-y-4 min-w-[320px]" ]
+            Html.aside [ Attr.class "prose flex flex-col space-y-4 lg:min-w-[320px] lg:w-auto w-full " ]
                 [ Html.form
                     [ Attr.class "flex flex-col space-y-4"
                     , Events.onSubmit RecalculateTotals
                     ]
                     [ Html.input
-                        [ Attr.class "input input-bordered w-full max-w-xs"
+                        [ Attr.class "input input-bordered w-full sm:max-w-xs"
                         , Attr.type_ "date"
                         , Attr.value model.editingScratch.endDate
                         , Events.onInput ScratchDateUpdated
                         ]
                         []
                     , Html.input
-                        [ Attr.class "input input-bordered w-full max-w-xs"
+                        [ Attr.class "input input-bordered w-full sm:max-w-xs"
                         , Attr.placeholder "Amount in account"
                         , Attr.value model.editingScratch.amountInBank
                         , Events.onInput ScratchAmountInBankUpdated
                         ]
                         []
                     , Html.input
-                        [ Attr.class "input input-bordered w-full max-w-xs"
+                        [ Attr.class "input input-bordered w-full sm:max-w-xs"
                         , Attr.placeholder "Amount to be left over"
                         , Attr.value model.editingScratch.amountLeftOver
                         , Events.onInput ScratchAmountLeftOverUpdated
