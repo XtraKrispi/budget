@@ -424,8 +424,8 @@ renderFrequencyOption selectedFrequency freq =
 
 view : Model -> Html Msg
 view model =
-    Html.div [ Attr.class "px-20 py-10" ]
-        [ Html.header [ Attr.class "prose lg:prose-xl flex space-x-4" ]
+    Html.div [ Attr.class "w-screen sm:px-20 py-10" ]
+        [ Html.header [ Attr.class "prose px-4 sm:px-auto lg:prose-xl flex space-x-4" ]
             [ Html.h2 []
                 [ Html.text "Definitions"
                 ]
@@ -450,36 +450,72 @@ view model =
             ]
         , Html.node "main"
             []
-            [ case model.definitions of
+            (case model.definitions of
                 RemoteData.Loading ->
-                    Html.text "Loading"
+                    [ Html.text "Loading" ]
 
                 RemoteData.Success s ->
                     if List.isEmpty s then
-                        Html.p [] [ Html.text "No definitions found" ]
+                        [ Html.p [] [ Html.text "No definitions found" ] ]
 
                     else
-                        Html.table [ Attr.class "table table-zebra" ]
-                            [ Html.thead []
-                                [ Html.tr []
-                                    [ Html.th [] [ Html.text "Description" ]
-                                    , Html.th [] [ Html.text "Amount" ]
-                                    , Html.th [] [ Html.text "Frequency" ]
-                                    , Html.th [] [ Html.text "Start Date" ]
-                                    , Html.th [] [ Html.text "End Date" ]
-                                    , Html.th [] [ Html.text "Deleted?" ]
-                                    ]
-                                ]
-                            , s
-                                |> List.map renderDefinitionRow
-                                |> Html.tbody []
-                            ]
+                        [ Html.div [ Attr.class "hidden lg:block" ] [ tableView s ]
+                        , Html.div [ Attr.class "lg:hidden" ] [ cardView s ]
+                        ]
 
                 _ ->
-                    Html.text ""
-            ]
+                    [ Html.text "" ]
+            )
         , definitionsModal ( model.editingDefinition, Nothing )
         , Html.div [ Attr.class "toast toast-top toast-center" ]
             [ Toasty.view Toast.toastyConfig Toast.renderToast ToastyMsg model.toasties
             ]
         ]
+
+
+tableView : List ( Definition, Int ) -> Html Msg
+tableView s =
+    Html.table [ Attr.class "table table-zebra" ]
+        [ Html.thead []
+            [ Html.tr []
+                [ Html.th [] [ Html.text "Description" ]
+                , Html.th [] [ Html.text "Amount" ]
+                , Html.th [] [ Html.text "Frequency" ]
+                , Html.th [] [ Html.text "Start Date" ]
+                , Html.th [] [ Html.text "End Date" ]
+                , Html.th [] [ Html.text "Deleted?" ]
+                ]
+            ]
+        , s
+            |> List.map renderDefinitionRow
+            |> Html.tbody []
+        ]
+
+
+renderDefinitionCard : ( Definition, Int ) -> Html Msg
+renderDefinitionCard ( def, id ) =
+    Html.div [ Attr.class "card w-full sm:w-96 bg-base-100 shadow-xl cursor-pointer", Events.onClick (EditDefinition ( def, id )) ]
+        [ Html.div [ Attr.class "card-body" ]
+            [ Html.h2 [ Attr.class "card-title flex justify-between" ]
+                [ Html.span [] [ Html.text def.description ]
+                , Html.span [] [ def.amount |> formatAmount |> Html.text ]
+                ]
+            , Html.p [] [ def.startDate |> formatDate |> Html.text ]
+            , Html.div [ Attr.class "flex justify-between items-center" ]
+                [ Html.div []
+                    [ if def.isAutomatic then
+                        Html.div [ Attr.class "badge badge-primary" ] [ Html.text "Automatic" ]
+
+                      else
+                        Html.text ""
+                    ]
+                ]
+            ]
+        ]
+
+
+cardView : List ( Definition, Int ) -> Html Msg
+cardView s =
+    s
+        |> List.map renderDefinitionCard
+        |> Html.div [ Attr.class "w-full" ]
