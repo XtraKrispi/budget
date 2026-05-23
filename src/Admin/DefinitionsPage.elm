@@ -459,8 +459,12 @@ view model =
                         [ Html.p [] [ Html.text "No definitions found" ] ]
 
                     else
-                        [ Html.div [ Attr.class "hidden lg:block" ] [ tableView s ]
-                        , Html.div [ Attr.class "lg:hidden" ] [ cardView s ]
+                        let
+                            sorted =
+                                s |> List.sortBy (\( def, _ ) -> Date.toRataDie def.startDate)
+                        in
+                        [ Html.div [ Attr.class "hidden lg:block" ] [ tableView sorted ]
+                        , Html.div [ Attr.class "lg:hidden" ] [ cardView sorted ]
                         ]
 
                 _ ->
