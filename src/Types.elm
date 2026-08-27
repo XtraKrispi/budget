@@ -39,6 +39,7 @@ type alias Scratch =
     { endDate : Date
     , amountInBank : Float
     , amountLeftOver : Float
+    , comments : String
     }
 
 
@@ -65,6 +66,7 @@ type alias RawScratch =
     { endDate : String
     , amountInBank : Float
     , amountLeftOver : Float
+    , comments : String
     }
 
 

@@ -63,6 +63,7 @@ defaultScratch today =
     { endDate = add Days 14 today
     , amountInBank = 0
     , amountLeftOver = 0
+    , comments = ""
     }
 
 
@@ -91,10 +92,20 @@ dateDecoder =
 
 scratchDecoder : Decode.Decoder ( Scratch, Int )
 scratchDecoder =
-    Decode.map4 (\endDate amountInBank amountLeftOver id -> ( Scratch endDate amountInBank amountLeftOver, id ))
+    Decode.map5
+        (\endDate amountInBank amountLeftOver comments id ->
+            ( { endDate = endDate
+              , amountInBank = amountInBank
+              , amountLeftOver = amountLeftOver
+              , comments = comments
+              }
+            , id
+            )
+        )
         (Decode.field "endDate" dateDecoder)
         (Decode.field "amountInBank" Decode.float)
         (Decode.field "amountLeftOver" Decode.float)
+        (Decode.field "comments" Decode.string)
         (Decode.field "id" Decode.int)
 
 
@@ -109,6 +120,7 @@ encodeScratch scratch =
         [ ( "endDate", encodeDate scratch.endDate )
         , ( "amountInBank", Encode.float scratch.amountInBank )
         , ( "amountLeftOver", Encode.float scratch.amountLeftOver )
+        , ( "comments", Encode.string scratch.comments )
         ]
 
 

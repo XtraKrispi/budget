@@ -31,6 +31,7 @@ type alias EditingScratch =
     { endDate : String
     , amountInBank : String
     , amountLeftOver : String
+    , comments : String
     }
 
 
@@ -47,6 +48,7 @@ type Msg
     | ScratchDateUpdated String
     | ScratchAmountInBankUpdated String
     | ScratchAmountLeftOverUpdated String
+    | ScratchCommentsUpdated String
     | ToastyMsg (Toasty.Msg (Toast Msg))
     | InsertArchiveSuccess Archive
     | InsertArchiveFailed String
@@ -70,19 +72,21 @@ init today =
 
 
 toEditingScratch : Scratch -> EditingScratch
-toEditingScratch { endDate, amountInBank, amountLeftOver } =
+toEditingScratch { endDate, amountInBank, amountLeftOver, comments } =
     { endDate = toIsoString endDate
     , amountInBank = Numeral.format "0.00" amountInBank
     , amountLeftOver = Numeral.format "0.00" amountLeftOver
+    , comments = comments
     }
 
 
 toScratch : EditingScratch -> Maybe Scratch
-toScratch { endDate, amountInBank, amountLeftOver } =
-    Maybe.map3 Scratch
+toScratch { endDate, amountInBank, amountLeftOver, comments } =
+    Maybe.map4 Scratch
         (fromIsoString endDate |> Result.toMaybe)
         (String.toFloat amountInBank)
         (String.toFloat amountLeftOver)
+        (Just comments)
 
 
 update : SessionInfo -> Msg -> Model -> ( Model, Cmd Msg )
@@ -186,6 +190,20 @@ update sessionInfo msg model =
                 | editingScratch =
                     { editingScratch
                         | amountLeftOver = str
+                    }
+              }
+            , Cmd.none
+            )
+
+        ScratchCommentsUpdated str ->
+            let
+                editingScratch =
+                    model.editingScratch
+            in
+            ( { model
+                | editingScratch =
+                    { editingScratch
+                        | comments = str
                     }
               }
             , Cmd.none
@@ -347,37 +365,48 @@ scratchArea model =
                 results =
                     computeResults items scratch
             in
-            Html.aside [ Attr.class "prose flex flex-col space-y-4 lg:min-w-[320px] lg:w-auto w-full " ]
+            Html.aside [ Attr.class "prose flex flex-col space-y-4 lg:min-w-125 lg:w-auto w-full " ]
                 [ Html.form
-                    [ Attr.class "flex flex-col space-y-4"
+                    [ Attr.class "flex flex-col gap-4"
                     , Events.onSubmit RecalculateTotals
                     ]
-                    [ Html.input
-                        [ Attr.class "input input-bordered w-full sm:max-w-xs"
-                        , Attr.type_ "date"
-                        , Attr.value model.editingScratch.endDate
-                        , Events.onInput ScratchDateUpdated
+                    [ Html.div [ Attr.class "flex lg:flex-row flex-col gap-4" ]
+                        [ Html.div [ Attr.class "flex flex-col space-y-4" ]
+                            [ Html.input
+                                [ Attr.class "input input-bordered w-full sm:max-w-xs"
+                                , Attr.type_ "date"
+                                , Attr.value model.editingScratch.endDate
+                                , Events.onInput ScratchDateUpdated
+                                ]
+                                []
+                            , Html.input
+                                [ Attr.class "input input-bordered w-full sm:max-w-xs"
+                                , Attr.placeholder "Amount in account"
+                                , Attr.value model.editingScratch.amountInBank
+                                , Events.onInput ScratchAmountInBankUpdated
+                                ]
+                                []
+                            , Html.input
+                                [ Attr.class "input input-bordered w-full sm:max-w-xs"
+                                , Attr.placeholder "Amount to be left over"
+                                , Attr.value model.editingScratch.amountLeftOver
+                                , Events.onInput ScratchAmountLeftOverUpdated
+                                ]
+                                []
+                            ]
+                        , Html.textarea
+                            [ Attr.class "textarea w-full"
+                            , Attr.value model.editingScratch.comments
+                            , Attr.placeholder "Any relevant comments here..."
+                            , Events.onInput ScratchCommentsUpdated
+                            ]
+                            []
                         ]
-                        []
-                    , Html.input
-                        [ Attr.class "input input-bordered w-full sm:max-w-xs"
-                        , Attr.placeholder "Amount in account"
-                        , Attr.value model.editingScratch.amountInBank
-                        , Events.onInput ScratchAmountInBankUpdated
-                        ]
-                        []
-                    , Html.input
-                        [ Attr.class "input input-bordered w-full sm:max-w-xs"
-                        , Attr.placeholder "Amount to be left over"
-                        , Attr.value model.editingScratch.amountLeftOver
-                        , Events.onInput ScratchAmountLeftOverUpdated
-                        ]
-                        []
                     , Html.button
                         [ Attr.class "btn btn-primary"
                         , Attr.type_ "submit"
                         ]
-                        [ Html.text "Recalculate" ]
+                        [ Html.text "Save + Recalculate" ]
                     ]
                 , Html.div []
                     [ Html.h3 [ Attr.class "flex justify-between" ]
