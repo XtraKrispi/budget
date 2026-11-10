@@ -4,6 +4,7 @@ import Date exposing (Date, Unit(..), add, fromIsoString, toIsoString)
 import Json.Decode as Decode
 import Json.Encode as Encode
 import List.Extra as LE
+import Maybe.Extra as ME
 import Numeral
 import Time exposing (Month(..))
 import Types exposing (Archive, ArchiveAction(..), Definition, Frequency(..), Item, Scratch, SessionInfo)
@@ -12,20 +13,38 @@ import Types exposing (Archive, ArchiveAction(..), Definition, Frequency(..), It
 extractItems : Date -> List Archive -> List ( Definition, Int ) -> List Item
 extractItems endDate archive defs =
     defs
-        |> LE.andThen (\( def, id ) -> def |> extractDatesForDefinition endDate |> List.map (extractItem def id))
-        |> List.filter
-            (\item ->
-                not
-                    (List.any (\a -> a.date == item.date && a.definitionId == item.definitionId)
-                        archive
-                    )
-            )
+        |> LE.andThen (\( def, id ) -> def |> extractDatesForDefinition endDate |> List.map (extractItem archive def id))
+        |> ME.values
         |> List.sortBy (\item -> Date.toRataDie item.date)
 
 
-extractItem : Definition -> Int -> Date -> Item
-extractItem def defId date =
-    { date = date, definition = def, definitionId = defId }
+extractItem : List Archive -> Definition -> Int -> Date -> Maybe Item
+extractItem archive def defId date =
+    let
+        payments =
+            archive
+                |> List.filter (\a -> a.action == PayAction && a.date == date && a.definitionId == defId)
+                |> List.map (\a -> ( a.amount, a.date ))
+
+        skips =
+            archive
+                |> List.filter (\a -> a.action == SkipAction && a.date == date && a.definitionId == defId)
+    in
+    if not (List.isEmpty skips) || (def.amount - List.sum (List.map Tuple.first payments) <= 0) then
+        Nothing
+
+    else
+        Just
+            { date = date
+            , definition = def
+            , definitionId = defId
+            , payments = payments
+            }
+
+
+amountRemaining : Item -> Float
+amountRemaining item =
+    max 0 (item.definition.amount - List.sum (List.map Tuple.first item.payments))
 
 
 extractDatesForDefinition : Date -> Definition -> List Date
@@ -71,7 +90,7 @@ computeResults : List Item -> Scratch -> { totalOwing : Float, totalOutstanding 
 computeResults items scratch =
     let
         totalOwing =
-            items |> List.foldr (\item total -> item.definition.amount + total) 0
+            items |> List.foldr (\item total -> (item.definition.amount - List.sum (List.map Tuple.first item.payments)) + total) 0
     in
     { totalOwing = totalOwing, totalOutstanding = abs (min 0 (scratch.amountInBank - scratch.amountLeftOver - totalOwing)) }
 
@@ -222,12 +241,16 @@ actionDecoder =
             )
 
 
-encodeArchive : Item -> ArchiveAction -> Encode.Value
-encodeArchive item action =
+encodeArchive : Item -> ArchiveAction -> Maybe Float -> Encode.Value
+encodeArchive item action amountOverride =
     Encode.object
         [ ( "definitionId", Encode.int item.definitionId )
         , ( "description", Encode.string item.definition.description )
-        , ( "amount", Encode.float item.definition.amount )
+        , ( "amount"
+          , amountOverride
+                |> Maybe.withDefault item.definition.amount
+                |> Encode.float
+          )
         , ( "date", encodeDate item.date )
         , ( "action", encodeAction action )
         ]

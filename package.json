@@ -19,7 +19,7 @@
     "@parcel/transformer-elm": "^2.16.4",
     "@tailwindcss/typography": "^0.5.19",
     "buffer": "^6.0.3",
-    "daisyui": "^5.5.19",
+    "daisyui": "^5.7.50",
     "parcel": "^2.16.4"
   }
 }

@@ -21,11 +21,6 @@ import Url
 import Url.Parser
 
 
-
--- TODO : Better Mobile Handling
---              Done for home page... do we use a dock instead of hamburger menu?
-
-
 main : Program () Model Msg
 main =
     Browser.Hash.application

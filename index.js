@@ -3,7 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 
 const app = Elm.Main.init();
 
-const supabase = createClient('https://cpmycpfuezkmecrryepz.supabase.co', 'sb_publishable_-lju4m81D5thK2S-E7ITDQ_3lNJXLgX')
+const supabaseDev = createClient('https://qcqxjviibbmsuzebmxnh.supabase.co', 'sb_publishable_p-XjY1h_8ph5TfOdTmFHlg_6VF2eryb')
+const supabase = process.env.ENV == "dev" ? supabaseDev : createClient('https://cpmycpfuezkmecrryepz.supabase.co', 'sb_publishable_-lju4m81D5thK2S-E7ITDQ_3lNJXLgX')
 
 app.ports.openDialog.subscribe((id) => {
     document.getElementById(id).showModal();

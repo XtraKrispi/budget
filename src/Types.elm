@@ -30,6 +30,7 @@ type alias Definition =
 
 type alias Item =
     { date : Date
+    , payments : List ( Float, Date )
     , definition : Definition
     , definitionId : Int
     }

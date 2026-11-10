@@ -1,20 +1,24 @@
 module HomePage exposing (..)
 
-import BusinessLogic exposing (archiveDecoder, computeResults, defaultScratch, definitionDecoder, encodeArchive, encodeScratch, extractItems, formatAmount, formatDate, isError, scratchDecoder)
-import Date exposing (Date, fromIsoString, toIsoString)
+import BusinessLogic exposing (amountRemaining, archiveDecoder, computeResults, defaultScratch, definitionDecoder, encodeArchive, encodeScratch, extractItems, formatAmount, formatDate, isError, scratchDecoder)
+import Date exposing (Date, fromIsoString, toIsoString, toRataDie)
 import Html exposing (Html)
 import Html.Attributes as Attr
-import Html.Events as Events
+import Html.Events as Events exposing (onSubmit)
 import Json.Decode as Decode
 import Numeral
 import Ports.Archive exposing (fetchArchive, fetchArchiveFailure, fetchArchiveSuccess, insertArchive, insertArchiveFailure, insertArchiveSuccess)
 import Ports.Clipboard exposing (copyToClipboard)
 import Ports.Definitions exposing (fetchDefinitions, fetchDefinitionsFailure, fetchDefinitionsSuccess)
+import Ports.Dialog exposing (closeDialog, openDialog)
 import Ports.Scratch exposing (fetchScratch, fetchScratchFailure, fetchScratchSuccess, insertScratch, saveScratchFailure, saveScratchSuccess, updateScratch)
 import RemoteData exposing (RemoteData)
+import Svg
+import Svg.Attributes as SvgAttr
 import Toast exposing (Toast)
 import Toasty
 import Types exposing (Archive, ArchiveAction(..), Definition, Item, Scratch, SessionInfo)
+import View.Common exposing (dialogCloseButton)
 
 
 type alias Model =
@@ -24,6 +28,13 @@ type alias Model =
     , today : Date
     , editingScratch : EditingScratch
     , toasties : Toasty.Stack (Toast Msg)
+    , editingPartialPayment : Maybe Partial
+    }
+
+
+type alias Partial =
+    { item : Item
+    , amount : String
     }
 
 
@@ -39,6 +50,9 @@ type Msg
     = CopyAmount Float
     | Skip Item
     | Pay Item
+    | OpenPartialPayments Item
+    | PartialPayment
+    | PartialPaymentUpdated String
     | RecalculateTotals
     | RecalculateSuccess Int
     | RecalculateFailed String
@@ -62,6 +76,7 @@ init today =
       , today = today
       , editingScratch = toEditingScratch (defaultScratch today)
       , toasties = Toasty.initialState
+      , editingPartialPayment = Nothing
       }
     , Cmd.batch
         [ fetchDefinitions { includeDeleted = False }
@@ -96,10 +111,10 @@ update sessionInfo msg model =
             ( model, copyToClipboard (String.fromFloat amt) )
 
         Skip item ->
-            ( model, insertArchive { data = encodeArchive item SkipAction, userId = sessionInfo.userId } )
+            ( model, insertArchive { data = encodeArchive item SkipAction Nothing, userId = sessionInfo.userId } )
 
         Pay item ->
-            ( model, insertArchive { data = encodeArchive item PayAction, userId = sessionInfo.userId } )
+            ( model, insertArchive { data = encodeArchive item PayAction Nothing, userId = sessionInfo.userId } )
 
         RecalculateTotals ->
             case ( toScratch model.editingScratch, model.scratch ) of
@@ -219,6 +234,33 @@ update sessionInfo msg model =
         ToastyMsg subMsg ->
             Toasty.update Toast.toastyConfig ToastyMsg subMsg model
 
+        PartialPayment ->
+            case ( model.editingPartialPayment, Maybe.andThen (String.toFloat << .amount) model.editingPartialPayment ) of
+                ( Just { item }, Just amount ) ->
+                    ( model
+                    , Cmd.batch
+                        [ insertArchive { data = encodeArchive item PayAction (Just amount), userId = sessionInfo.userId }
+                        , closeDialog "partialPaymentsModal"
+                        ]
+                    )
+
+                _ ->
+                    ( model, Cmd.none )
+
+        OpenPartialPayments item ->
+            ( { model
+                | editingPartialPayment =
+                    Just
+                        { item = item
+                        , amount = ""
+                        }
+              }
+            , openDialog "partialPaymentsModal"
+            )
+
+        PartialPaymentUpdated str ->
+            ( { model | editingPartialPayment = Maybe.map (\p -> { p | amount = str }) model.editingPartialPayment }, Cmd.none )
+
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
@@ -322,11 +364,37 @@ itemsSection model =
 
 renderItem : Item -> Html Msg
 renderItem item =
-    Html.div [ Attr.class "card w-full sm:w-96 bg-base-100 shadow-xl" ]
+    Html.div [ Attr.class "card w-full sm:w-150 bg-base-100 shadow-xl" ]
         [ Html.div [ Attr.class "card-body" ]
             [ Html.h2 [ Attr.class "card-title flex justify-between" ]
                 [ Html.span [] [ Html.text item.definition.description ]
-                , Html.span [ Attr.class "cursor-pointer", Events.onClick (CopyAmount item.definition.amount) ] [ item.definition.amount |> formatAmount |> Html.text ]
+                , Html.div [ Attr.class "flex gap-2" ]
+                    [ Html.span [ Attr.class "cursor-pointer", Events.onClick (CopyAmount (amountRemaining item)) ]
+                        [ item
+                            |> amountRemaining
+                            |> formatAmount
+                            |> Html.text
+                        ]
+                    , if List.isEmpty item.payments then
+                        Html.text ""
+
+                      else
+                        Svg.svg
+                            [ SvgAttr.fill "none"
+                            , SvgAttr.viewBox "0 0 24 24"
+                            , SvgAttr.strokeWidth "1.5"
+                            , SvgAttr.stroke "currentColor"
+                            , SvgAttr.class "size-6 text-info"
+                            , SvgAttr.title "Partial payments exist for this item"
+                            ]
+                            [ Svg.path
+                                [ SvgAttr.strokeLinecap "round"
+                                , SvgAttr.strokeLinejoin "round"
+                                , SvgAttr.d "m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                                ]
+                                []
+                            ]
+                    ]
                 ]
             , Html.p [] [ item.date |> formatDate |> Html.text ]
             , Html.div [ Attr.class "flex justify-between items-center" ]
@@ -337,7 +405,7 @@ renderItem item =
                       else
                         Html.text ""
                     ]
-                , Html.div [ Attr.class "card-actions justify-end" ]
+                , Html.div [ Attr.class "flex flex-col sm:flex-row gap-2 justify-end" ]
                     [ Html.button
                         [ Attr.class "btn"
                         , Events.onClick (Skip item)
@@ -347,7 +415,12 @@ renderItem item =
                         [ Attr.class "btn btn-primary"
                         , Events.onClick (Pay item)
                         ]
-                        [ Html.text "Pay" ]
+                        [ Html.text "Pay Remainder" ]
+                    , Html.button
+                        [ Attr.class "btn btn-info"
+                        , Events.onClick (OpenPartialPayments item)
+                        ]
+                        [ Html.text "Partial Payments" ]
                     ]
                 ]
             ]
@@ -424,6 +497,99 @@ scratchArea model =
             Html.aside [] []
 
 
+partialPaymentModal : Maybe Partial -> Html Msg
+partialPaymentModal part =
+    Html.node "dialog"
+        [ Attr.class "modal", Attr.id "partialPaymentsModal" ]
+        [ Html.div [ Attr.class "modal-box" ]
+            [ dialogCloseButton
+            , Html.h3 [ Attr.class "font-bold text-lg" ]
+                [ Html.text "Partial Payments"
+                ]
+            , Html.div [ Attr.class "flex flex-col gap-2" ]
+                [ case part of
+                    Just p ->
+                        let
+                            totalPaid =
+                                p.item.payments |> List.map Tuple.first |> List.sum
+                        in
+                        Html.div [ Attr.class "overflow-x-auto rounded-box border border-base-content/5 bg-base-100" ]
+                            [ Html.table [ Attr.class "table" ]
+                                [ Html.thead []
+                                    [ Html.tr []
+                                        [ Html.th [] [ Html.text "Date" ]
+                                        , Html.th [] [ Html.text "Amount" ]
+                                        ]
+                                    ]
+                                , p.item.payments
+                                    |> List.sortBy (toRataDie << Tuple.second)
+                                    |> List.map
+                                        (\( amount, date ) ->
+                                            Html.tr []
+                                                [ Html.td [] [ date |> formatDate |> Html.text ]
+                                                , Html.td [ Attr.class "text-right" ]
+                                                    [ amount
+                                                        |> formatAmount
+                                                        |> Html.text
+                                                    ]
+                                                ]
+                                        )
+                                    |> Html.tbody []
+                                , Html.tfoot []
+                                    [ Html.tr [] [ Html.th [] [ Html.text "Total Partial Payments" ], Html.th [ Attr.class "text-right" ] [ totalPaid |> formatAmount |> Html.text ] ]
+                                    , Html.tr [] [ Html.th [] [ Html.text "Amount Remaining" ], Html.th [ Attr.class "text-right" ] [ p.item.definition.amount - totalPaid |> formatAmount |> Html.text ] ]
+                                    ]
+                                ]
+                            ]
+
+                    Nothing ->
+                        Html.text ""
+                , Html.form
+                    [ Attr.class "flex flex-col space-y-2"
+                    , onSubmit PartialPayment
+                    ]
+                    [ Html.label [ Attr.class "form-control w-full max-w-xs" ]
+                        [ Html.input
+                            [ Attr.class "input input-bordered w-full max-w-xs"
+                            , Attr.placeholder "Amount"
+                            , Attr.required True
+                            , Attr.value (part |> Maybe.map .amount |> Maybe.withDefault "")
+                            , Events.onInput PartialPaymentUpdated
+                            ]
+                            []
+                        ]
+                    , Html.div [ Attr.class "modal-action" ]
+                        [ Html.button
+                            [ Attr.class "btn btn-primary"
+                            , Attr.type_ "submit"
+                            ]
+                            [ Html.text "Save"
+                            , Svg.svg
+                                [ SvgAttr.class "h-6 w-6"
+                                , SvgAttr.fill "none"
+                                , SvgAttr.viewBox "0 0 24 24"
+                                , SvgAttr.strokeWidth "1.5"
+                                , SvgAttr.stroke "currentColor"
+                                ]
+                                [ Svg.path
+                                    [ SvgAttr.strokeLinecap "round"
+                                    , SvgAttr.strokeLinejoin "round"
+                                    , SvgAttr.strokeWidth "2"
+                                    , SvgAttr.d "M11 16h2m6.707-9.293-2.414-2.414A1 1 0 0 0 16.586 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7.414a1 1 0 0 0-.293-.707ZM16 20v-6a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v6h8ZM9 4h6v3a1 1 0 0 1-1 1h-4a1 1 0 0 1-1-1V4Z"
+                                    ]
+                                    []
+                                ]
+                            ]
+                        ]
+                    ]
+                ]
+            ]
+        , Html.form [ Attr.method "dialog", Attr.class "modal-backdrop" ]
+            [ Html.button [] [ Html.text "close" ]
+            ]
+        ]
+
+
 view : Model -> Html Msg
 view model =
     Html.div [ Attr.class "w-screen sm:px-20 py-10" ]
@@ -437,4 +603,5 @@ view model =
         , Html.div [ Attr.class "toast toast-top toast-center" ]
             [ Toasty.view Toast.toastyConfig Toast.renderToast ToastyMsg model.toasties
             ]
+        , partialPaymentModal model.editingPartialPayment
         ]
